@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Grabador OBD Outlander</title>
+<meta name="theme-color" content="#18212b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una columna pensada para el teléfono en el soporte del carro; números grandes, botones grandes */
+:root {
+  --bg: #eef1f4; --surface: #fbfcfd; --sunken: #e4e9ee; --ink: #10161c; --ink-2: #48535f; --muted: #76818d;
+  --line: #d6dde4; --accent: #1d64a8; --accent-ink: #ffffff; --band: #18212b; --band-ink: #e9eef3; --band-muted: #9aa8b6;
+  --rec: #d03b3b; --rec-ink: #ffffff; --good: #0ca30c; --good-ink: #0a6e0a; --warn: #fab219; --warn-ink: #8a5a00; --crit-ink: #a52626;
+  --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1116; --surface: #151b22; --sunken: #1c242d; --ink: #edf1f5; --ink-2: #b6c0cb; --muted: #84909c;
+    --line: #27313b; --accent: #5aa6ea; --accent-ink: #08121c; --band: #0a0e12; --band-ink: #edf1f5; --band-muted: #8d9aa7;
+    --rec: #e05252; --good-ink: #3fc23f; --warn-ink: #fab219; --crit-ink: #ef6b6b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1116; --surface: #151b22; --sunken: #1c242d; --ink: #edf1f5; --ink-2: #b6c0cb; --muted: #84909c;
+  --line: #27313b; --accent: #5aa6ea; --accent-ink: #08121c; --band: #0a0e12; --band-ink: #edf1f5; --band-muted: #8d9aa7;
+  --rec: #e05252; --good-ink: #3fc23f; --warn-ink: #fab219; --crit-ink: #ef6b6b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+[hidden] { display: none !important; }
+.wrap { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; margin: 0; line-height: 1.1; text-wrap: balance; }
+h2 { font-size: 1.45rem; }
+p { margin: 0; }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.band { background: var(--band); color: var(--band-ink); }
+.band .wrap { padding-block: 16px 14px; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.band h1 { font-size: 1.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.band .sub { color: var(--band-muted); font-size: .88rem; }
+.band a { color: var(--band-ink); font-size: .9rem; }
+main .wrap { padding-block: 16px 48px; display: grid; gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.between { justify-content: space-between; }
+button, select { font: inherit; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 11px 16px; font-weight: 500; font-size: .95rem; cursor: pointer; min-height: 44px; }
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.small { padding: 6px 12px; min-height: 36px; font-size: .85rem; }
+.btn.danger { color: var(--crit-ink); }
+.btn:disabled { opacity: .45; cursor: default; }
+select { color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-height: 40px; max-width: 100%; }
+.status { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 4px 12px; font-size: .82rem; font-weight: 600; border: 1px solid var(--line); background: var(--sunken); color: var(--ink-2); }
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.pill.on { color: var(--good-ink); border-color: var(--good); background: transparent; }
+.pill.on::before { background: var(--good); }
+.pill.busy { color: var(--warn-ink); border-color: var(--warn); background: transparent; }
+.pill.busy::before { background: var(--warn); }
+.pill.sim { color: var(--warn-ink); border-color: var(--warn); background: transparent; }
+.pill.sim::before { display: none; }
+.meta { font-size: .85rem; color: var(--ink-2); }
+.meta b { color: var(--ink); font-weight: 600; }
+.note { font-size: .85rem; color: var(--muted); }
+.err { font-size: .9rem; color: var(--crit-ink); }
+.okmsg { font-size: .9rem; color: var(--good-ink); }
+/* Grabación */
+.recbar { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
+.recbtn { width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--rec); background: var(--surface); cursor: pointer; display: grid; place-items: center; }
+.recbtn span { width: 34px; height: 34px; border-radius: 50%; background: var(--rec); transition: border-radius .15s; }
+.recbtn.on span { border-radius: 6px; width: 30px; height: 30px; }
+.recbtn:disabled { opacity: .4; cursor: default; }
+.clock { font-family: var(--f-display); font-size: 2.6rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.clock.live { color: var(--rec); }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 560px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tile { background: var(--sunken); border-radius: 8px; padding: 9px 10px; min-width: 0; }
+.tile .v { font-family: var(--f-display); font-size: 1.8rem; font-weight: 600; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.tile .u { font-size: .75rem; color: var(--muted); margin-left: 3px; font-family: var(--f-body); }
+.tile .l { font-size: .72rem; color: var(--muted); line-height: 1.25; }
+.tile.stale .v { color: var(--muted); }
+.tile.na .v { font-size: 1rem; color: var(--muted); font-family: var(--f-body); font-weight: 500; padding: 7px 0 4px; }
+/* Códigos */
+.codes { display: grid; gap: 0; }
+.code { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.code:first-child { border-top: 0; }
+.code .c { font-family: var(--f-mono); font-weight: 500; font-size: 1.05rem; }
+.code .k { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.mons { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 14px; font-size: .86rem; }
+.mons span::before { content: "●"; margin-right: 6px; font-size: .7rem; vertical-align: 1px; }
+.mons .done::before { color: var(--good); }
+.mons .todo::before { color: var(--warn); }
+.ff { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px 14px; font-size: .86rem; }
+.confirm { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; background: var(--sunken); border-radius: 8px; padding: 10px 12px; }
+/* Grabaciones */
+.recs { display: grid; }
+.rec { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); }
+.rec:first-child { border-top: 0; }
+.rec .t { font-weight: 600; }
+.log { font-family: var(--f-mono); font-size: .74rem; background: var(--sunken); border-radius: 6px; padding: 8px; max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-all; color: var(--ink-2); }
+details summary { cursor: pointer; font-weight: 600; }
+ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--ink-2); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="band">
+  <div class="wrap">
+    <div>
+      <h1>Grabador OBD</h1>
+      <p class="sub">Mitsubishi Outlander 2007 · 2.4 L 4G69</p>
+    </div>
+    <a href="analizador.html">Abrir el analizador →</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="card" aria-labelledby="h-con">
+      <div class="row between"><h2 id="h-con">Adaptador</h2><span class="pill" id="pill">Desconectado</span></div>
+      <p class="meta" id="con-meta">Empareja el adaptador en el Bluetooth del teléfono (clave 1234 o 0000), pon la llave en ON y toca Conectar.</p>
+      <p class="err" id="no-serial" hidden>Este navegador no puede conectarse a adaptadores Bluetooth. Abre esta página en <b>Chrome para Android, versión 137 o más nueva</b>. Mientras tanto puedes usar el modo prueba.</p>
+      <div class="row">
+        <button class="btn primary" id="btn-connect" type="button">Conectar</button>
+        <button class="btn" id="btn-sim" type="button">Modo prueba (sin carro)</button>
+        <button class="btn" id="btn-disc" type="button" hidden>Desconectar</button>
+      </div>
+      <div class="row">
+        <label class="note" for="proto">Protocolo</label>
+        <select id="proto">
+          <option value="0">Automático</option>
+          <option value="3">ISO 9141-2</option>
+          <option value="4">ISO 14230-4 KWP (5 baudios)</option>
+          <option value="5">ISO 14230-4 KWP (rápido)</option>
+          <option value="6">CAN 11 bit 500 kbps</option>
+        </select>
+      </div>
+      <p class="err" id="con-err" hidden></p>
+      <details>
+        <summary>Registro del adaptador</summary>
+        <div class="log" id="log" aria-live="off"></div>
+      </details>
+    </section>
+
+    <section class="card" aria-labelledby="h-rec">
+      <h2 id="h-rec">Grabar recorrido</h2>
+      <div class="recbar">
+        <button class="recbtn" id="btn-rec" type="button" aria-label="Empezar a grabar" disabled><span></span></button>
+        <div>
+          <div class="clock" id="clock">0:00</div>
+          <div class="note" id="rec-meta">Conéctate para empezar</div>
+        </div>
+      </div>
+      <div class="tiles" id="tiles"></div>
+      <p class="note">Deja la pantalla encendida y Chrome abierto mientras grabas. Si el teléfono se bloquea, Android corta el Bluetooth.</p>
+    </section>
+
+    <section class="card" aria-labelledby="h-dtc">
+      <div class="row between"><h2 id="h-dtc">Códigos de falla</h2>
+        <div class="row"><button class="btn small" id="btn-read" type="button" disabled>Leer códigos</button><button class="btn small danger" id="btn-clear" type="button" disabled>Borrar códigos</button></div>
+      </div>
+      <div class="confirm" id="clear-confirm" hidden>
+        <span>Borrar apaga la luz de check engine y reinicia los monitores de emisiones. Si la falla sigue, el código vuelve.</span>
+        <button class="btn small danger" id="btn-clear-yes" type="button">Sí, borrar</button>
+        <button class="btn small" id="btn-clear-no" type="button">Cancelar</button>
+      </div>
+      <div id="dtc-out"><p class="note">Toca Leer códigos con el adaptador conectado. Los códigos se guardan junto con la grabación.</p></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-list">
+      <h2 id="h-list">Grabaciones guardadas</h2>
+      <div class="recs" id="recs"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-how">
+      <h2 id="h-how">Cómo hacer un buen recorrido</h2>
+      <ol class="steps">
+        <li>Con el motor frío, conecta y toca <b>Leer códigos</b>.</li>
+        <li>Toca el botón rojo, arranca y deja 2 a 3 minutos en ralentí.</li>
+        <li>Maneja 15 a 20 minutos por ciudad y por avenida o autopista. Acelera fuerte una vez, solo si es seguro.</li>
+        <li>Termina con 1 a 2 minutos en ralentí y detén la grabación.</li>
+        <li>Toca <b>Analizar</b> en la grabación.</li>
+      </ol>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const fmt = (v, d = 0) => Number.isFinite(v) ? v.toLocaleString('es-VE', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—';
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const mmss = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
+
+/* ---------- Registro del adaptador ---------- */
+const logLines = [];
+function log(msg) {
+  const t = new Date().toLocaleTimeString('es-VE', { hour12: false });
+  logLines.push(t + '  ' + msg);
+  if (logLines.length > 250) logLines.shift();
+  const el = $('log'); el.textContent = logLines.join('\n'); el.scrollTop = el.scrollHeight;
+}
+
+/* ---------- PIDs del modo 01 ---------- */
+const PIDS = {
+  '0C': { k: 'rpm', n: 2, f: b => (b[0] * 256 + b[1]) / 4 },
+  '0D': { k: 'speed', n: 1, f: b => b[0] },
+  '05': { k: 'ect', n: 1, f: b => b[0] - 40 },
+  '0F': { k: 'iat', n: 1, f: b => b[0] - 40 },
+  '10': { k: 'maf', n: 2, f: b => (b[0] * 256 + b[1]) / 100 },
+  '11': { k: 'tps', n: 1, f: b => b[0] * 100 / 255 },
+  '04': { k: 'load', n: 1, f: b => b[0] * 100 / 255 },
+  '0E': { k: 'timing', n: 1, f: b => b[0] / 2 - 64 },
+  '06': { k: 'stft', n: 1, f: b => (b[0] - 128) * 100 / 128 },
+  '07': { k: 'ltft', n: 1, f: b => (b[0] - 128) * 100 / 128 },
+  '14': { k: 'o2s1', n: 1, f: b => b[0] / 200 },
+  '15': { k: 'o2s2', n: 1, f: b => b[0] / 200 },
+  '0B': { k: 'map', n: 1, f: b => b[0] },
+  '33': { k: 'baro', n: 1, f: b => b[0] },
+  '42': { k: 'volt', n: 2, f: b => (b[0] * 256 + b[1]) / 1000 },
+  '46': { k: 'amb', n: 1, f: b => b[0] - 40 },
+};
+const FAST = ['0C', '0D', '10', '11', '14', '06'];
+const SLOW = ['15', '05', '04', '0E', '07', '0F', '0B', '33', '46', '42'];
+
+/* Columnas del CSV: los nombres los reconoce el analizador */
+const COLS = [
+  ['rpm', 'RPM del motor (rpm)', 0, 'RPM', 'rpm'],
+  ['speed', 'Velocidad del vehículo (km/h)', 0, 'Velocidad', 'km/h'],
+  ['ect', 'Temperatura del refrigerante del motor (°C)', 0, 'Refrigerante', '°C'],
+  ['stft', 'Ajuste de combustible a corto plazo - Banco 1 (%)', 1, 'Ajuste corto', '%'],
+  ['ltft', 'Ajuste de combustible a largo plazo - Banco 1 (%)', 1, 'Ajuste largo', '%'],
+  ['o2s1', 'Sensor de oxígeno Banco 1 - Sensor 1 voltaje (V)', 3, 'O2 delantera', 'V'],
+  ['o2s2', 'Sensor de oxígeno Banco 1 - Sensor 2 voltaje (V)', 3, 'O2 trasera', 'V'],
+  ['maf', 'Flujo de aire MAF (g/s)', 2, 'Flujo de aire', 'g/s'],
+  ['tps', 'Posición del acelerador (%)', 1, 'Acelerador', '%'],
+  ['load', 'Carga calculada del motor (%)', 1, 'Carga', '%'],
+  ['timing', 'Avance del encendido (°)', 1, 'Avance', '°'],
+  ['iat', 'Temperatura del aire de admisión (°C)', 0, 'Aire admisión', '°C'],
+  ['volt', 'Voltaje de la batería (V)', 2, 'Voltaje', 'V'],
+  ['map', 'Presión del múltiple MAP (kPa)', 0, 'MAP', 'kPa'],
+  ['baro', 'Presión barométrica (kPa)', 0, 'Barométrica', 'kPa'],
+  ['amb', 'Temperatura ambiente (°C)', 0, 'Ambiente', '°C'],
+];
+const TILE_DEC = { o2s1: 2, o2s2: 2, volt: 1, maf: 1, stft: 1, ltft: 1, timing: 0, tps: 0, load: 0 };
+const PROTOS = { '1': 'SAE J1850 PWM', '2': 'SAE J1850 VPW', '3': 'ISO 9141-2', '4': 'ISO 14230-4 KWP (5 baudios)', '5': 'ISO 14230-4 KWP (rápido)', '6': 'CAN 11 bit 500k', '7': 'CAN 29 bit 500k', '8': 'CAN 11 bit 250k', '9': 'CAN 29 bit 250k' };
+
+/* ---------- Transporte Bluetooth (Web Serial sobre RFCOMM) ---------- */
+class SerialLink {
+  async open() {
+    const SPP = '00001101-0000-1000-8000-00805f9b34fb';
+    try {
+      this.port = await navigator.serial.requestPort({ filters: [{ bluetoothServiceClassId: SPP }], allowedBluetoothServiceClassIds: [SPP] });
+    } catch (e) {
+      if (e.name === 'NotFoundError' || e.name === 'AbortError' || e.name === 'SecurityError') throw e;
+      this.port = await navigator.serial.requestPort();
+    }
+    await this.port.open({ baudRate: 38400 });
+    this.writer = this.port.writable.getWriter();
+    this.alive = true;
+    this.loop();
+  }
+  async loop() {
+    const dec = new TextDecoder();
+    while (this.alive && this.port.readable) {
+      this.reader = this.port.readable.getReader();
+      try {
+        for (;;) { const { value, done } = await this.reader.read(); if (done) break; if (value && this.onData) this.onData(dec.decode(value, { stream: true })); }
+      } catch (e) { if (this.alive && this.onLost) this.onLost(e); this.alive = false; }
+      finally { try { this.reader.releaseLock(); } catch (e) { /* ya liberado */ } }
+    }
+  }
+  write(s) { return this.writer.write(new TextEncoder().encode(s)); }
+  async close() {
+    this.alive = false;
+    try { await this.reader?.cancel(); } catch (e) { /* cerrado */ }
+    try { this.writer?.releaseLock(); } catch (e) { /* cerrado */ }
+    try { await this.port?.close(); } catch (e) { /* cerrado */ }
+  }
+}
+
+/* ---------- Adaptador simulado: ELM327 + motor 4G69 ---------- */
+class SimLink {
+  async open() { this.t0 = performance.now(); this.searched = false; this.spaces = true; this.o2 = 0; this.alive = true; }
+  write(s) {
+    const c = s.replace(/\s/g, '').toUpperCase();
+    const isAT = c.startsWith('AT');
+    let delay = isAT ? 20 : 70;
+    if (c === '0100' && !this.searched) delay = 1600;
+    setTimeout(() => { if (this.alive && this.onData) this.onData(this.reply(c) + '\r\r>'); }, delay);
+    return Promise.resolve();
+  }
+  async close() { this.alive = false; }
+  sp(h) { return this.spaces ? h.match(/../g).join(' ') : h; }
+  reply(c) {
+    if (c === 'ATZ' || c === 'ATWS') { this.spaces = true; return '\r\rELM327 v1.5'; }
+    if (c === 'ATI') return 'ELM327 v1.5';
+    if (c === 'ATS0') { this.spaces = false; return 'OK'; }
+    if (c === 'ATDPN') return 'A3';
+    if (c === 'ATRV') { const s = this.state(); return s.volt.toFixed(1) + 'V'; }
+    if (c.startsWith('AT')) return 'OK';
+    const sup = ['01', '03', '04', '05', '06', '07', '0C', '0D', '0E', '0F', '10', '11', '13', '14', '15', '1C', '20', '33'];
+    const mask = base => { let bits = 0n; for (let i = 1; i <= 32; i++) { const p = (base + i).toString(16).padStart(2, '0').toUpperCase(); if (sup.includes(p)) bits |= 1n << BigInt(32 - i); } return bits.toString(16).padStart(8, '0').toUpperCase(); };
+    const h2 = n => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0').toUpperCase();
+    if (c === '0100') { const first = !this.searched; this.searched = true; return (first ? 'SEARCHING...\rBUS INIT: ...OK\r' : '') + this.sp('4100' + mask(0)); }
+    if (c === '0120') return this.sp('4120' + mask(0x20));
+    if (c === '0101') return this.sp('4101' + '00076504');
+    if (c === '03') return this.sp('43' + '000000000000');
+    if (c === '07') return this.sp('47' + '017100000000');
+    if (c === '04') return '44';
+    if (c === '020200') return this.sp('42020000' + '00');
+    if (c === '0902') return 'NO DATA';
+    if (c.startsWith('01') && c.length === 4) {
+      const p = c.slice(2);
+      if (!sup.includes(p)) return 'NO DATA';
+      const s = this.state();
+      const two = x => { x = Math.max(0, Math.min(65535, Math.round(x))); return h2(x >> 8) + h2(x & 255); };
+      const enc = {
+        '0C': two(s.rpm * 4), '0D': h2(s.speed), '05': h2(s.ect + 40), '0F': h2(s.iat + 40), '10': two(s.maf * 100),
+        '11': h2(s.tps * 2.55), '04': h2(s.load * 2.55), '0E': h2((s.timing + 64) * 2), '06': h2(s.stft * 1.28 + 128),
+        '07': h2(s.ltft * 1.28 + 128), '14': h2(s.o2s1 * 200) + h2(s.stft * 1.28 + 128), '15': h2(s.o2s2 * 200) + 'FF',
+        '33': h2(92), '13': '03', '1C': '06'
+      }[p];
+      return enc ? this.sp('41' + p + enc) : 'NO DATA';
+    }
+    return '?';
+  }
+  state() {
+    const tv = ((performance.now() - this.t0) / 1000 * 4) % 960;
+    const keys = [[0, 0], [150, 0], [158, 25], [170, 42], [200, 45], [212, 0], [228, 0], [240, 30], [255, 48], [290, 50], [302, 0], [318, 0], [330, 35], [345, 55], [380, 58], [392, 20], [400, 0], [415, 0], [430, 40], [450, 62], [480, 68], [500, 80], [540, 90], [580, 95], [590, 60], [600, 60], [608, 100], [640, 100], [680, 110], [720, 95], [740, 70], [760, 45], [775, 30], [790, 0], [805, 0], [815, 30], [830, 40], [845, 0], [960, 0]];
+    const sp = t => { for (let i = 1; i < keys.length; i++) if (t <= keys[i][0]) { const [a, va] = keys[i - 1], [b, vb] = keys[i]; return va + (vb - va) * (t - a) / (b - a); } return 0; };
+    const nz = a => (Math.random() - 0.5) * 2 * a;
+    const v = sp(tv), dv = sp(tv + 1) - sp(tv - 1), wot = tv >= 600 && tv < 612;
+    const up = wot ? [30, 60, 95] : [18, 35, 55]; let g = 0; while (g < 3 && v > up[g]) g++;
+    const k = [103, 57, 36, 25.5][g];
+    const ect = Math.min(87.5, 29 + 70 * (1 - Math.exp(-tv / 260))) + nz(0.3);
+    const idle = 760 + Math.max(0, 60 - ect) * 12;
+    let rpm = Math.max(idle, v * k * (dv > 0.5 && v < 30 ? 1.25 : 1.04)) + nz(12);
+    if (wot) rpm = Math.min(5600, Math.max(rpm, v * k * 1.08));
+    const decel = dv < -0.5 && v > 15;
+    const tps = wot ? 92 : decel || v < 1 ? 12.5 : 14 + Math.max(0, dv) * 9 + v * 0.06;
+    const load = wot ? 96 : decel ? 14 : v < 1 ? 23 + Math.max(0, 60 - ect) * 0.15 : Math.min(80, 26 + Math.max(0, dv) * 14 + v * 0.18);
+    const maf = (load / 100) * 0.92 * 2.378 * rpm / 120 * (92000 / (287.05 * 309)) + nz(0.15);
+    const closed = ect > 45 && !decel && !wot;
+    if (closed && Math.random() < 0.42) this.o2 = 1 - this.o2;
+    const ltft = closed ? Math.max(1.5, Math.min(14, 14 * Math.exp(-(maf - 3) / 3.5))) + 1.5 : 0;
+    return {
+      speed: v, rpm, ect, tps, load, maf, ltft,
+      iat: 33 + (v < 5 ? Math.min(8, tv / 60) : 0) + nz(0.4),
+      timing: wot ? 19 + nz(1) : decel ? 22 : v < 1 ? 9 + nz(1.2) : 28 + v * 0.05 + nz(1.5),
+      stft: closed ? (this.o2 ? -3 : 4) + nz(2.5) : 0,
+      o2s1: !closed ? (decel ? 0.04 : wot ? 0.86 : 0.12) : (this.o2 ? 0.72 + nz(0.1) : 0.16 + nz(0.07)),
+      o2s2: Math.max(0.02, Math.min(0.68, 0.08 + tv * 0.0016) + nz(0.025) - (decel ? 0.3 : 0)),
+      volt: 14.1 + (ect < 50 ? 0.25 : 0) + nz(0.04),
+    };
+  }
+}
+
+/* ---------- ELM327 ---------- */
+const ERR_RE = /UNABLE TO CONNECT|BUS INIT:\s*\.*\s*ERROR|NO DATA|STOPPED|CAN ERROR|BUS ERROR|FB ERROR|DATA ERROR|BUFFER FULL|RX ERROR|ACT ALERT|LV RESET/i;
+class ELM {
+  constructor(link) { this.link = link; this.buf = ''; this.wait = null; this.chain = Promise.resolve(); this.stale = false; link.onData = s => this.data(s); }
+  data(s) {
+    this.buf += s;
+    const i = this.buf.indexOf('>');
+    if (i >= 0 && this.wait) { const r = this.buf.slice(0, i); this.buf = this.buf.slice(i + 1); const w = this.wait; this.wait = null; clearTimeout(w.timer); w.resolve(r); }
+  }
+  cmd(c, ms = 2500, quiet = false) {
+    const run = async () => {
+      if (this.stale) { await sleep(250); this.stale = false; }
+      this.buf = '';
+      const raw = await new Promise(resolve => {
+        const timer = setTimeout(() => { this.wait = null; this.stale = true; resolve(null); }, ms);
+        this.wait = { resolve, timer };
+        this.link.write(c + '\r').catch(() => { clearTimeout(timer); this.wait = null; resolve(null); });
+      });
+      if (!quiet) log('→ ' + c + '   ← ' + (raw === null ? '(sin respuesta)' : lines(raw, c, true).join(' | ') || '(vacío)'));
+      return raw;
+    };
+    const p = this.chain.then(run);
+    this.chain = p.catch(() => {});
+    return p;
+  }
+}
+function lines(raw, c, keepAll) {
+  const cc = (c || '').replace(/\s/g, '');
+  return raw.replace(/\r/g, '\n').split('\n').map(s => s.trim()).filter(s => s && s.replace(/\s/g, '') !== cc && (keepAll || (!/^SEARCHING/i.test(s) && !/^BUS INIT/i.test(s))));
+}
+const errOf = raw => { if (raw === null) return 'sin respuesta'; const m = raw.match(ERR_RE); if (m) return m[0]; return lines(raw).some(l => l === '?') ? '?' : null; };
+const hexLines = raw => lines(raw).map(l => l.replace(/\s/g, '').replace(/^[0-9A-F]{1,2}:/i, '').toUpperCase()).filter(l => /^[0-9A-F]+$/.test(l));
+const bytesOf = h => (h.match(/../g) || []).map(x => parseInt(x, 16));
+
+/* ---------- Estado ---------- */
+let link = null, elm = null, sim = false, proto = '', version = '', vin = '';
+let supported = new Set(), active = new Set(), latest = {}, polling = false;
+let recording = null, lastCodes = null, wakeLock = null, rateCount = 0, rate = 0;
+const STORE = 'obd-grabaciones-v1', CUR = 'obd-grabacion-actual', PROTO_KEY = 'obd-protocolo';
+try { const p = localStorage.getItem(PROTO_KEY); if (p) $('proto').value = p; } catch (e) { /* sin almacenamiento */ }
+$('proto').addEventListener('change', () => { try { localStorage.setItem(PROTO_KEY, $('proto').value); } catch (e) { /* sin almacenamiento */ } });
+
+function setStatus(kind, text) {
+  const p = $('pill'); p.className = 'pill' + (kind ? ' ' + kind : ''); p.textContent = text;
+  const on = kind === 'on' || kind === 'sim';
+  $('btn-connect').hidden = on || kind === 'busy'; $('btn-sim').hidden = on || kind === 'busy';
+  $('btn-disc').hidden = !(on || kind === 'busy');
+  $('btn-rec').disabled = !on; $('btn-read').disabled = !on; $('btn-clear').disabled = !on;
+  $('proto').disabled = on || kind === 'busy';
+  if (!on && !recording) $('rec-meta').textContent = 'Conéctate para empezar';
+}
+function showErr(msg) { const e = $('con-err'); e.innerHTML = msg || ''; e.hidden = !msg; }
+
+async function connect(useSim) {
+  showErr('');
+  sim = useSim;
+  const l = useSim ? new SimLink() : new SerialLink();
+  try {
+    if (!useSim && !('serial' in navigator)) throw Object.assign(new Error('sin web serial'), { name: 'NoSerial' });
+    await l.open();
+  } catch (e) {
+    if (e.name === 'NotFoundError' || e.name === 'AbortError') { showErr('No elegiste ningún adaptador. Si no aparece en la lista, emparéjalo primero en Ajustes → Bluetooth.'); return; }
+    if (e.name === 'NoSerial') { showErr('Este navegador no permite conectar adaptadores Bluetooth. Usa Chrome 137 o más nuevo en Android.'); return; }
+    if (e.name === 'SecurityError') { showErr('El navegador bloqueó la conexión Bluetooth en esta página. Ábrela directamente en Chrome, no dentro de otra app.'); return; }
+    showErr('No pude abrir la conexión con el adaptador: ' + esc(e.message) + '. Apaga y enciende el Bluetooth del teléfono y vuelve a intentar.');
+    return;
+  }
+  link = l; elm = new ELM(l);
+  l.onLost = () => lost('Se perdió la conexión Bluetooth con el adaptador.');
+  setStatus('busy', 'Conectando…');
+  try {
+    log('— Iniciando ' + (useSim ? 'simulador' : 'adaptador'));
+    const z = await elm.cmd('ATZ', 4000);
+    if (z === null) await elm.cmd('ATZ', 4000);
+    await sleep(300);
+    for (const c of ['ATE0', 'ATL0', 'ATS0', 'ATH0', 'ATAT1']) await elm.cmd(c, 1500);
+    const vi = await elm.cmd('ATI', 1500); version = vi ? lines(vi)[0] || '' : '';
+    await elm.cmd('ATSP' + $('proto').value, 1500);
+    $('con-meta').textContent = 'Buscando el protocolo del carro. En la línea K puede tardar hasta 15 segundos…';
+    const r = await elm.cmd('0100', 20000);
+    const er = errOf(r);
+    if (er) throw new Error(er === 'sin respuesta' ? 'El adaptador no respondió.' : er);
+    const dp = await elm.cmd('ATDPN', 1500);
+    const pn = dp ? (lines(dp)[0] || '').replace(/^A/i, '') : '';
+    proto = PROTOS[pn] || (pn ? 'protocolo ' + pn : 'desconocido');
+    supported = new Set();
+    addMask('00', r);
+    if (supported.has('20')) addMask('20', await elm.cmd('0120', 4000));
+    if (supported.has('40')) addMask('40', await elm.cmd('0140', 4000));
+    active = new Set([...FAST, ...SLOW].filter(p => supported.has(p)));
+    vin = '';
+    if (!useSim) { const v = await elm.cmd('0902', 5000); vin = parseVIN(v); }
+    log('PIDs soportados: ' + [...supported].sort().join(' '));
+    setStatus(useSim ? 'sim' : 'on', useSim ? 'Simulador' : 'Conectado');
+    $('con-meta').innerHTML = (useSim ? '<b>Modo prueba:</b> datos inventados de un 4G69, no son de tu carro. ' : '') +
+      'Protocolo <b>' + esc(proto) + '</b> · ' + esc(version || 'ELM327') + ' · ' + active.size + ' señales disponibles' + (vin ? ' · VIN ' + esc(vin) : '');
+    renderTiles();
+    poll();
+  } catch (e) {
+    const msg = String(e.message || e);
+    log('✕ ' + msg);
+    await disconnect(true);
+    if (/UNABLE TO CONNECT|BUS INIT/i.test(msg)) showErr('El adaptador no logró hablar con la computadora del carro (' + esc(msg) + '). Confirma la llave en ON y prueba el protocolo <b>ISO 9141-2</b> a mano. Si sigue igual, este adaptador "v2.1" probablemente no maneja bien la línea K de tu Outlander.');
+    else showErr('No se completó la conexión: ' + esc(msg) + ' Revisa la llave en ON e intenta de nuevo. El registro del adaptador muestra el detalle.');
+  }
+}
+function addMask(base, raw) {
+  if (!raw) return;
+  for (const l of hexLines(raw)) {
+    if (!l.startsWith('41' + base) || l.length < 12) continue;
+    const b = bytesOf(l.slice(4, 12)), b0 = parseInt(base, 16);
+    for (let i = 0; i < 32; i++) if (b[i >> 3] & (0x80 >> (i & 7))) supported.add((b0 + i + 1).toString(16).padStart(2, '0').toUpperCase());
+  }
+}
+function parseVIN(raw) {
+  if (!raw || errOf(raw)) return '';
+  const ls = hexLines(raw);
+  let bytes = [];
+  if (ls.some(l => /^4902\d\d/.test(l)) && !ls.some(l => /^4902\d\d.{20,}/.test(l))) {
+    ls.filter(l => l.startsWith('4902')).sort().forEach(l => { bytes.push(...bytesOf(l.slice(6))); });
+  } else {
+    const all = ls.filter(l => !/^[0-9A-F]{3}$/.test(l)).join(''); const i = all.indexOf('4902');
+    if (i >= 0) bytes = bytesOf(all.slice(i + 6));
+  }
+  const s = String.fromCharCode(...bytes.filter(b => b >= 0x30 && b <= 0x5A));
+  return /^[A-HJ-NPR-Z0-9]{17}$/.test(s.slice(-17)) ? s.slice(-17) : '';
+}
+async function disconnect(silent) {
+  polling = false;
+  if (recording) stopRec();
+  const l = link; link = null; elm = null;
+  try { await l?.close(); } catch (e) { /* cerrado */ }
+  setStatus('', 'Desconectado');
+  if (!silent) $('con-meta').textContent = 'Desconectado.';
+  renderTiles();
+}
+function lost(msg) {
+  if (!link) return;
+  log('✕ ' + msg);
+  const wasRec = !!recording;
+  disconnect(true).then(() => showErr(msg + (wasRec ? ' La grabación se guardó hasta ese momento.' : '') + ' Vuelve a conectar para seguir.'));
+}
+
+/* ---------- Lectura en vivo ---------- */
+async function readPid(pid) {
+  const raw = await elm.cmd('01' + pid, 2500, true);
+  if (raw === null) return { timeout: true };
+  const er = errOf(raw); if (er) return { err: er };
+  const l = hexLines(raw).find(x => x.startsWith('41' + pid));
+  if (!l) return { err: 'formato' };
+  const b = bytesOf(l.slice(4));
+  if (b.length < PIDS[pid].n) return { err: 'corto' };
+  return { bytes: b };
+}
+async function poll() {
+  polling = true;
+  let slowIdx = 0, fails = 0, lastRV = 0;
+  const miss = {};
+  const me = link;
+  while (polling && link === me) {
+    const fast = FAST.filter(p => active.has(p)), slow = SLOW.filter(p => active.has(p));
+    const batch = [...fast];
+    for (let k = 0; k < 2 && slow.length; k++) batch.push(slow[slowIdx++ % slow.length]);
+    if (!batch.length) { await sleep(500); continue; }
+    const row = { t: Date.now() };
+    for (const pid of batch) {
+      if (!polling || link !== me) return;
+      const r = await readPid(pid);
+      if (r.timeout) { if (++fails >= 6) { lost('El adaptador dejó de responder.'); return; } continue; }
+      fails = 0;
+      if (r.err) { miss[pid] = (miss[pid] || 0) + 1; if (miss[pid] >= 5 && r.err === 'NO DATA') { active.delete(pid); log('Se dejó de pedir el PID ' + pid + ' (no responde)'); } continue; }
+      miss[pid] = 0;
+      const d = PIDS[pid], v = d.f(r.bytes);
+      row[d.k] = v; latest[d.k] = { v, t: Date.now() }; rateCount++;
+    }
+    if (!active.has('42') && Date.now() - lastRV > 8000 && link === me) {
+      lastRV = Date.now();
+      const raw = await elm.cmd('ATRV', 1500, true);
+      const m = raw && raw.match(/(\d{1,2}[.,]\d)\s*V/i);
+      if (m) { const v = parseFloat(m[1].replace(',', '.')); row.volt = v; latest.volt = { v, t: Date.now() }; }
+    }
+    if (recording && Object.keys(row).length > 1) recording.rows.push(row);
+    renderTiles();
+  }
+}
+setInterval(() => { rate = rateCount; rateCount = 0; renderRec(); }, 1000);
+
+function renderTiles() {
+  const now = Date.now();
+  const shown = COLS.filter(([k]) => ['rpm', 'speed', 'ect', 'stft', 'ltft', 'o2s1', 'o2s2', 'maf', 'tps', 'load', 'timing', 'iat', 'volt'].includes(k));
+  $('tiles').innerHTML = shown.map(([k, , , label, unit]) => {
+    const pid = Object.keys(PIDS).find(p => PIDS[p].k === k);
+    const avail = link && (active.has(pid) || (k === 'volt'));
+    const L = latest[k];
+    if (link && !avail) return `<div class="tile na"><div class="v">No disponible</div><div class="l">${label}</div></div>`;
+    const stale = !L || now - L.t > 6000 || !link;
+    const d = TILE_DEC[k] ?? 0;
+    return `<div class="tile${stale ? ' stale' : ''}"><div class="v">${L ? fmt(L.v, d) : '—'}<span class="u">${unit}</span></div><div class="l">${label}</div></div>`;
+  }).join('');
+}
+
+/* ---------- Grabación ---------- */
+async function keepAwake() { try { if ('wakeLock' in navigator && document.visibilityState === 'visible') wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { /* no disponible */ } }
+document.addEventListener('visibilitychange', () => { if (recording && document.visibilityState === 'visible') keepAwake(); });
+function startRec() {
+  recording = { id: 'r' + Date.now(), start: Date.now(), rows: [], sim, proto, vin, version, codes: lastCodes ? { stored: [...lastCodes.stored], pending: [...lastCodes.pending] } : null };
+  $('btn-rec').classList.add('on'); $('btn-rec').setAttribute('aria-label', 'Detener grabación');
+  $('clock').classList.add('live');
+  keepAwake();
+  log('● Grabación iniciada');
+}
+function stopRec() {
+  if (!recording) return;
+  const r = recording; recording = null;
+  $('btn-rec').classList.remove('on'); $('btn-rec').setAttribute('aria-label', 'Empezar a grabar');
+  $('clock').classList.remove('live');
+  try { wakeLock?.release(); } catch (e) { /* liberado */ } wakeLock = null;
+  try { localStorage.removeItem(CUR); } catch (e) { /* sin almacenamiento */ }
+  if (r.rows.length < 3) { log('Grabación descartada: muy corta'); renderRec(); return; }
+  storeRec(r);
+  log('■ Grabación guardada: ' + r.rows.length + ' lecturas');
+  renderRec(); renderList();
+}
+function storeRec(r) {
+  const list = loadRecs();
+  const end = r.rows[r.rows.length - 1].t;
+  list.unshift({ id: r.id, start: r.start, end, n: r.rows.length, sim: r.sim, proto: r.proto, codes: r.codes, csv: toCSV(r) });
+  while (list.length > 12) list.pop();
+  if (!saveRecs(list)) {
+    while (list.length > 1) { list.pop(); if (saveRecs(list)) { showErr('La memoria del navegador está llena: se borraron las grabaciones más viejas.'); return; } }
+    showErr('No pude guardar la grabación en el teléfono. Descárgala ahora desde la lista.');
+    memOnly.unshift(list[0]);
+  }
+}
+const memOnly = [];
+function loadRecs() { try { return JSON.parse(localStorage.getItem(STORE) || '[]'); } catch (e) { return []; } }
+function saveRecs(list) { try { localStorage.setItem(STORE, JSON.stringify(list)); return true; } catch (e) { return false; } }
+setInterval(() => { if (recording) { try { localStorage.setItem(CUR, JSON.stringify(recording)); } catch (e) { /* sin espacio */ } } }, 15000);
+
+function toCSV(r) {
+  const used = COLS.filter(([k]) => r.rows.some(x => x[k] !== undefined));
+  const meta = ['Grabador OBD Outlander', 'inicio=' + new Date(r.start).toISOString(), 'protocolo=' + (r.proto || ''), 'adaptador=' + (r.version || ''), 'vin=' + (r.vin || ''), 'simulado=' + (r.sim ? 'si' : 'no')];
+  if (r.codes) { meta.push('dtc_guardados=' + r.codes.stored.join(' ')); meta.push('dtc_pendientes=' + r.codes.pending.join(' ')); }
+  const out = ['# ' + meta.join('; '), ['time', ...used.map(c => c[1])].join(',')];
+  for (const row of r.rows) out.push([new Date(row.t).toISOString(), ...used.map(([k, , d]) => row[k] === undefined ? '' : row[k].toFixed(d))].join(','));
+  return out.join('\n');
+}
+function renderRec() {
+  if (recording) {
+    $('clock').textContent = mmss((Date.now() - recording.start) / 1000);
+    $('rec-meta').textContent = recording.rows.length + ' lecturas · ' + rate + ' valores por segundo';
+  } else if (link) {
+    $('clock').textContent = '0:00';
+    $('rec-meta').textContent = 'Listo para grabar · ' + rate + ' valores por segundo';
+  }
+}
+
+/* ---------- Códigos ---------- */
+function dtcFrom(b1, b2) { return 'PCBU'[b1 >> 6] + ((b1 >> 4) & 3) + (b1 & 15).toString(16).toUpperCase() + b2.toString(16).padStart(2, '0').toUpperCase(); }
+async function readDTC(mode) {
+  const raw = await elm.cmd(mode, 8000);
+  if (raw === null) throw new Error('El adaptador no respondió.');
+  const er = errOf(raw);
+  if (er === 'NO DATA') return [];
+  if (er) throw new Error(er);
+  const resp = (parseInt(mode, 16) + 0x40).toString(16).toUpperCase();
+  const ls = hexLines(raw), codes = [];
+  const can = /CAN/.test(proto);
+  if (!can) {
+    for (const l of ls) if (l.startsWith(resp)) { const b = bytesOf(l.slice(2)); for (let i = 0; i + 1 < b.length; i += 2) if (b[i] || b[i + 1]) codes.push(dtcFrom(b[i], b[i + 1])); }
+  } else {
+    const all = ls.filter(l => !/^[0-9A-F]{3}$/.test(l)).join(''); const i = all.indexOf(resp);
+    if (i >= 0) { const b = bytesOf(all.slice(i + 2)); const n = b[0]; for (let k = 0; k < n; k++) { const x = b[1 + 2 * k], y = b[2 + 2 * k]; if (x !== undefined && (x || y)) codes.push(dtcFrom(x, y)); } }
+  }
+  return [...new Set(codes)];
+}
+async function readCodes() {
+  const out = $('dtc-out');
+  out.innerHTML = '<p class="note">Leyendo…</p>';
+  $('btn-read').disabled = true;
+  try {
+    const stored = await readDTC('03');
+    const pending = await readDTC('07');
+    let mil = null, count = null, mons = [];
+    const r1 = await elm.cmd('0101', 4000);
+    const l1 = r1 && !errOf(r1) ? hexLines(r1).find(l => l.startsWith('4101')) : null;
+    if (l1) {
+      const [A, B, C, D] = bytesOf(l1.slice(4));
+      mil = !!(A & 0x80); count = A & 0x7f;
+      [['Fallos de encendido', 0], ['Sistema de combustible', 1], ['Componentes', 2]].forEach(([n, i]) => { if (B & (1 << i)) mons.push([n, !(B & (1 << (i + 4)))]); });
+      if (!(B & 0x08)) ['Catalizador', 'Catalizador calentado', 'Sistema EVAP', 'Aire secundario', '', 'Sonda O2', 'Calentador de sonda O2', 'EGR'].forEach((n, i) => { if (n && (C & (1 << i))) mons.push([n, !(D & (1 << i))]); });
+    }
+    let ff = null;
+    const f = await elm.cmd('020200', 4000);
+    const fl = f && !errOf(f) ? hexLines(f).find(l => l.startsWith('420200')) : null;
+    if (fl) {
+      const b = bytesOf(fl.slice(6));
+      if (b.length >= 2 && (b[0] || b[1])) {
+        ff = { code: dtcFrom(b[0], b[1]), vals: [] };
+        for (const pid of ['0C', '0D', '05', '04', '06', '07', '10', '11', '0B']) {
+          if (!supported.has(pid)) continue;
+          const rr = await elm.cmd('02' + pid + '00', 3000, true);
+          const ll = rr && !errOf(rr) ? hexLines(rr).find(l => l.startsWith('42' + pid + '00')) : null;
+          if (ll) { const d = PIDS[pid], bb = bytesOf(ll.slice(6)); if (bb.length >= d.n) { const c = COLS.find(x => x[0] === d.k); ff.vals.push([c[3], fmt(d.f(bb), TILE_DEC[d.k] ?? 0) + ' ' + c[4]]); } }
+        }
+      }
+    }
+    lastCodes = { stored, pending, mil, count, mons, ff, t: Date.now() };
+    if (recording) recording.codes = { stored: [...stored], pending: [...pending] };
+    renderCodes();
+  } catch (e) {
+    out.innerHTML = '<p class="err">No pude leer los códigos: ' + esc(e.message) + '</p>';
+  }
+  $('btn-read').disabled = !link;
+}
+function renderCodes() {
+  const c = lastCodes; if (!c) return;
+  const list = [...c.stored.map(x => [x, 'Guardado']), ...c.pending.filter(x => !c.stored.includes(x)).map(x => [x, 'Pendiente'])];
+  let html = '';
+  if (c.mil !== null) html += `<p class="${c.mil ? 'err' : 'okmsg'}">${c.mil ? 'Luz de check engine encendida' : 'Luz de check engine apagada'}${c.count ? ' · ' + c.count + ' código(s) confirmados' : ''}</p>`;
+  html += list.length ? `<div class="codes">${list.map(([x, k]) => `<div class="code"><div><div class="c">${x}</div><div class="k">${k}</div></div><div class="note">Ábrelo en el analizador para ver qué significa y qué revisar.</div></div>`).join('')}</div>` : '<p class="okmsg">Sin códigos guardados ni pendientes.</p>';
+  if (c.ff) html += `<div><div class="label">Freeze frame de ${c.ff.code}</div><div class="ff" style="margin-top:4px">${c.ff.vals.map(([n, v]) => `<span>${n}: <b class="num">${v}</b></span>`).join('') || '<span class="note">Sin datos del momento de la falla</span>'}</div></div>`;
+  if (c.mons.length) html += `<div><div class="label">Monitores de emisiones</div><div class="mons" style="margin-top:4px">${c.mons.map(([n, ok]) => `<span class="${ok ? 'done' : 'todo'}">${n}: ${ok ? 'listo' : 'pendiente'}</span>`).join('')}</div></div>`;
+  html += `<p class="note">Leído a las ${new Date(c.t).toLocaleTimeString('es-VE', { hour12: false })}.</p>`;
+  $('dtc-out').innerHTML = html;
+}
+async function clearCodes() {
+  $('clear-confirm').hidden = true;
+  const r = await elm.cmd('04', 8000);
+  if (r && /44/.test(r.replace(/\s/g, ''))) { $('dtc-out').innerHTML = '<p class="okmsg">Códigos borrados. Leyendo de nuevo…</p>'; await sleep(800); readCodes(); }
+  else $('dtc-out').innerHTML = '<p class="err">El carro no confirmó el borrado. Prueba con el motor apagado y la llave en ON.</p>';
+}
+
+/* ---------- Lista de grabaciones ---------- */
+function renderList() {
+  const list = [...memOnly, ...loadRecs()];
+  const el = $('recs');
+  if (!list.length) { el.innerHTML = '<p class="note">Todavía no hay grabaciones. Las que hagas quedan guardadas en este teléfono.</p>'; return; }
+  el.innerHTML = list.map(r => {
+    const d = new Date(r.start);
+    const dur = mmss((r.end - r.start) / 1000);
+    const codes = r.codes ? [...r.codes.stored, ...r.codes.pending] : null;
+    return `<div class="rec" data-id="${r.id}">
+      <div class="row between"><span class="t">${d.toLocaleDateString('es-VE', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', hour12: false })}${r.sim ? ' · prueba' : ''}</span><span class="note num">${dur} · ${r.n} lecturas</span></div>
+      <div class="note">${codes === null ? 'Sin lectura de códigos' : codes.length ? 'Códigos: ' + codes.join(', ') : 'Sin códigos'}${r.proto ? ' · ' + esc(r.proto) : ''}</div>
+      <div class="row"><button class="btn small primary" data-act="analyze" type="button">Analizar</button><button class="btn small" data-act="download" type="button">Descargar CSV</button><button class="btn small" data-act="share" type="button">Compartir</button><button class="btn small danger" data-act="del" type="button">Borrar</button></div>
+    </div>`;
+  }).join('');
+}
+$('recs').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const id = b.closest('.rec').dataset.id;
+  const r = [...memOnly, ...loadRecs()].find(x => x.id === id); if (!r) return;
+  const name = 'outlander-' + new Date(r.start).toISOString().slice(0, 16).replace(/[:T]/g, '-') + (r.sim ? '-prueba' : '') + '.csv';
+  if (b.dataset.act === 'analyze') {
+    try { localStorage.setItem('obd-analizar', JSON.stringify({ csv: r.csv, name })); location.href = 'analizador.html#resumen'; }
+    catch (err) { showErr('No pude pasar la grabación al analizador. Descárgala e impórtala allí.'); }
+  } else if (b.dataset.act === 'download') {
+    const url = URL.createObjectURL(new Blob([r.csv], { type: 'text/csv' }));
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } else if (b.dataset.act === 'share') {
+    const file = new File([r.csv], name, { type: 'text/csv' });
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: name });
+      else showErr('Este teléfono no permite compartir archivos desde aquí. Usa Descargar CSV.');
+    } catch (err) { if (err.name !== 'AbortError') showErr('No se pudo compartir: ' + esc(err.message)); }
+  } else if (b.dataset.act === 'del') {
+    if (b.dataset.sure) { saveRecs(loadRecs().filter(x => x.id !== id)); const i = memOnly.findIndex(x => x.id === id); if (i >= 0) memOnly.splice(i, 1); renderList(); }
+    else { b.dataset.sure = '1'; b.textContent = '¿Borrar? Toca otra vez'; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = 'Borrar'; } }, 4000); }
+  }
+});
+
+/* ---------- Eventos ---------- */
+$('btn-connect').addEventListener('click', () => connect(false));
+$('btn-sim').addEventListener('click', () => connect(true));
+$('btn-disc').addEventListener('click', () => disconnect(false));
+$('btn-rec').addEventListener('click', () => recording ? stopRec() : startRec());
+$('btn-read').addEventListener('click', readCodes);
+$('btn-clear').addEventListener('click', () => { $('clear-confirm').hidden = false; });
+$('btn-clear-no').addEventListener('click', () => { $('clear-confirm').hidden = true; });
+$('btn-clear-yes').addEventListener('click', clearCodes);
+window.addEventListener('beforeunload', e => { if (recording) { try { localStorage.setItem(CUR, JSON.stringify(recording)); } catch (x) { /* sin espacio */ } e.preventDefault(); } });
+
+/* ---------- Inicio ---------- */
+if (!('serial' in navigator)) $('no-serial').hidden = false;
+try {
+  const cur = JSON.parse(localStorage.getItem(CUR) || 'null');
+  if (cur && cur.rows && cur.rows.length >= 3) { storeRec(cur); log('Se recuperó una grabación que quedó abierta'); }
+  localStorage.removeItem(CUR);
+} catch (e) { /* sin almacenamiento */ }
+setStatus('', 'Desconectado');
+renderTiles(); renderList();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1318 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#18212b"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Diagnóstico Outlander CU5W</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: banda de instrumento arriba (vehículo + estado), pestañas fijas, contenido en una columna de lectura con rejillas que colapsan en teléfono */
+:root {
+  --bg: #eef1f4;
+  --surface: #fbfcfd;
+  --sunken: #e4e9ee;
+  --ink: #10161c;
+  --ink-2: #48535f;
+  --muted: #76818d;
+  --line: #d6dde4;
+  --accent: #1d64a8;
+  --accent-ink: #ffffff;
+  --band: #18212b;
+  --band-ink: #e9eef3;
+  --band-muted: #9aa8b6;
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --good: #0ca30c;
+  --good-ink: #0a6e0a;
+  --warn: #fab219;
+  --warn-ink: #8a5a00;
+  --crit: #d03b3b;
+  --crit-ink: #a52626;
+  --info: #5f6f80;
+  --grid: #e1e5e9;
+  --axis: #c3c9d0;
+  --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1116; --surface: #151b22; --sunken: #1c242d; --ink: #edf1f5; --ink-2: #b6c0cb; --muted: #84909c;
+    --line: #27313b; --accent: #5aa6ea; --accent-ink: #08121c; --band: #0a0e12; --band-ink: #edf1f5; --band-muted: #8d9aa7;
+    --s1: #3987e5; --s2: #d95926; --good-ink: #3fc23f; --warn-ink: #fab219; --crit-ink: #ef6b6b; --info: #94a3b3;
+    --grid: #232b34; --axis: #38424d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1116; --surface: #151b22; --sunken: #1c242d; --ink: #edf1f5; --ink-2: #b6c0cb; --muted: #84909c;
+  --line: #27313b; --accent: #5aa6ea; --accent-ink: #08121c; --band: #0a0e12; --band-ink: #edf1f5; --band-muted: #8d9aa7;
+  --s1: #3987e5; --s2: #d95926; --good-ink: #3fc23f; --warn-ink: #fab219; --crit-ink: #ef6b6b; --info: #94a3b3;
+  --grid: #232b34; --axis: #38424d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--band); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.1; }
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.2rem; }
+p { margin: 0; }
+.mono, .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+button, .btn { font: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Banda del vehículo */
+.band { background: var(--band); color: var(--band-ink); }
+.band .wrap { padding-block: 18px 16px; display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-end; justify-content: space-between; }
+.band h1 { font-size: 2.1rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.band .sub { color: var(--band-muted); font-size: .9rem; margin-top: 4px; }
+.vin { font-family: var(--f-mono); font-size: .82rem; letter-spacing: .12em; color: var(--band-ink); border: 1px solid #ffffff2e; border-radius: 4px; padding: 3px 8px; display: inline-block; margin-top: 8px; }
+.spec { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .82rem; color: var(--band-muted); }
+.spec b { color: var(--band-ink); font-weight: 500; }
+
+/* Pestañas */
+.tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.tabs .wrap { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.tabs .wrap::-webkit-scrollbar { display: none; }
+.tab { background: none; border: 0; border-bottom: 3px solid transparent; padding: 12px 12px 9px; color: var(--ink-2); font-family: var(--f-display); font-size: 1.08rem; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab:hover { color: var(--ink); }
+
+main .wrap { padding-block: 20px 48px; display: grid; gap: 20px; }
+.panel[hidden] { display: none !important; }
+.panel { display: grid; gap: 20px; }
+
+/* Barra de fuente de datos */
+.source { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+.source .who { display: flex; gap: 10px; align-items: center; min-width: 0; flex-wrap: wrap; }
+.source .fname { font-weight: 600; overflow-wrap: anywhere; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 600; border-radius: 999px; padding: 2px 9px; border: 1px solid var(--line); color: var(--ink-2); background: var(--sunken); white-space: nowrap; }
+.chip.example { border-color: var(--warn); color: var(--warn-ink); background: transparent; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 8px 14px; font-weight: 500; font-size: .9rem; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.small { padding: 5px 10px; font-size: .82rem; }
+input[type="file"] { display: none; }
+.notice { font-size: .85rem; color: var(--ink-2); }
+.error { color: var(--crit-ink); font-size: .88rem; }
+
+/* Resumen */
+.summary { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 760px) { .summary { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; min-width: 0; }
+.gauge { display: grid; justify-items: center; gap: 4px; text-align: center; }
+.gauge svg { width: 100%; max-width: 260px; height: auto; display: block; }
+.gauge .verdict { font-family: var(--f-display); font-size: 1.35rem; font-weight: 600; }
+.gauge .note { font-size: .82rem; color: var(--muted); }
+.counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; margin-top: 10px; }
+.counts div { background: var(--sunken); border-radius: 6px; padding: 6px 4px; }
+.counts .n { font-family: var(--f-display); font-size: 1.5rem; font-weight: 600; line-height: 1; }
+.counts .l { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px 18px; }
+.fact .v { font-family: var(--f-display); font-size: 1.7rem; font-weight: 600; line-height: 1.1; }
+.fact .v small { font-family: var(--f-body); font-size: .8rem; color: var(--muted); font-weight: 400; margin-left: 3px; }
+.fact .d { font-size: .8rem; color: var(--muted); }
+
+/* Hallazgos */
+.findings { display: grid; }
+.finding { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 6px 16px; padding: 16px 0; border-top: 1px solid var(--line); }
+.finding:first-child { border-top: 0; padding-top: 4px; }
+@media (max-width: 560px) { .finding { grid-template-columns: minmax(0, 1fr); } }
+.sev { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; align-self: start; padding: 3px 8px 3px 6px; border-radius: 4px; border: 1px solid currentColor; width: fit-content; }
+.sev svg { width: 14px; height: 14px; flex: none; }
+.sev.crit { color: var(--crit-ink); }
+.sev.warn { color: var(--warn-ink); }
+.sev.ok { color: var(--good-ink); }
+.sev.info { color: var(--info); }
+.finding h3 { font-size: 1.2rem; margin-bottom: 4px; }
+.finding .area { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; }
+.finding p { color: var(--ink-2); max-width: 68ch; }
+.evidence { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.evidence span { font-family: var(--f-mono); font-size: .78rem; background: var(--sunken); border-radius: 4px; padding: 2px 7px; color: var(--ink); }
+.todo { margin: 8px 0 0; padding-left: 18px; color: var(--ink-2); font-size: .92rem; display: grid; gap: 2px; }
+.section-head { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; justify-content: space-between; }
+.section-head p { color: var(--muted); font-size: .88rem; }
+
+/* Gráficas */
+.charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .charts { grid-template-columns: minmax(0, 1fr); } }
+.chart-card h3 { font-size: 1.1rem; }
+.chart-card .meta { font-size: .78rem; color: var(--muted); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .8rem; color: var(--ink-2); margin-top: 4px; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.plot { position: relative; margin-top: 8px; touch-action: pan-y; }
+.plot svg { display: block; width: 100%; overflow: visible; }
+.plot text { font-family: var(--f-mono); font-size: 10px; fill: var(--muted); }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: .78rem; box-shadow: 0 4px 14px #0000001f; white-space: nowrap; z-index: 2; }
+.tip .t { color: var(--muted); font-family: var(--f-mono); font-size: .72rem; }
+.tip .row { display: flex; gap: 8px; align-items: center; color: var(--ink); }
+.tip .row i { width: 10px; height: 3px; border-radius: 2px; display: inline-block; }
+.empty-chart { font-size: .85rem; color: var(--muted); padding: 24px 0; }
+
+/* Tablas */
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+td.num, th.num { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+select, input[type="text"] { font: inherit; font-size: .88rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; max-width: 100%; }
+details summary { cursor: pointer; font-family: var(--f-display); font-size: 1.1rem; font-weight: 600; }
+
+/* Códigos */
+.code-entry { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.code-entry input[type="text"] { flex: 1 1 220px; min-width: 0; font-family: var(--f-mono); text-transform: uppercase; }
+.dtc { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 4px 14px; padding: 14px 0; border-top: 1px solid var(--line); align-items: start; }
+.dtc:first-child { border-top: 0; }
+@media (max-width: 560px) { .dtc { grid-template-columns: minmax(0, 1fr) auto; } .dtc .body { grid-column: 1 / -1; } }
+.dtc .code { font-family: var(--f-mono); font-size: 1.1rem; font-weight: 500; }
+.dtc .kind { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.dtc .body p { color: var(--ink-2); }
+.dtc .body strong { color: var(--ink); font-weight: 600; }
+.x { border: 0; background: none; color: var(--muted); font-size: 1.2rem; line-height: 1; padding: 2px 6px; }
+.x:hover { color: var(--crit-ink); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); color: var(--ink-2); padding: 6px 10px; font-size: .85rem; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+
+/* Consumo */
+.bars { display: grid; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) 112px; gap: 10px; align-items: center; font-size: .86rem; }
+.bar-row .track { height: 14px; background: var(--sunken); border-radius: 0 4px 4px 0; position: relative; }
+.bar-row .fill { position: absolute; inset: 0 auto 0 0; background: var(--s1); border-radius: 0 4px 4px 0; }
+.bar-row .best .fill { background: var(--s1); }
+.bar-row .val { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.bar-row .lab { color: var(--ink-2); }
+.tips { display: grid; gap: 10px; margin: 0; padding-left: 18px; }
+.tips li { max-width: 72ch; color: var(--ink-2); }
+.tips li b { color: var(--ink); }
+
+/* Conectar */
+.steps { counter-reset: s; display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+.steps li:first-child { border-top: 0; }
+.steps li::before { content: counter(s); font-family: var(--f-display); font-weight: 700; font-size: 1.3rem; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--accent); color: var(--accent); display: grid; place-items: center; line-height: 1; }
+.steps h3 { font-size: 1.15rem; margin-bottom: 2px; }
+.steps p { color: var(--ink-2); max-width: 70ch; }
+.pids { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.pids span { font-size: .8rem; background: var(--sunken); border-radius: 4px; padding: 2px 8px; }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.plain { margin: 6px 0 0; padding-left: 18px; color: var(--ink-2); display: grid; gap: 4px; }
+footer { color: var(--muted); font-size: .8rem; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<header class="band">
+  <div class="wrap">
+    <div>
+      <h1>Diagnóstico Outlander</h1>
+      <p class="sub">Mitsubishi Outlander 2007 · primera generación</p>
+      <a href="index.html" style="color:var(--band-ink);font-size:.9rem">← Grabador</a>
+    </div>
+    <div class="spec">
+      <span>Motor <b>2.4 L 4G69 MIVEC</b></span>
+      <span>Chasis <b>CU5W</b></span>
+      <span>Caja <b>automática INVECS-II</b></span>
+      <span>Tracción <b>4x4</b></span>
+      <span>Protocolo <b>línea K (ISO 9141 / KWP)</b></span>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="Secciones">
+  <div class="wrap" role="tablist">
+    <button class="tab" role="tab" id="tab-resumen" data-tab="resumen" aria-selected="true">Resumen</button>
+    <button class="tab" role="tab" id="tab-datos" data-tab="datos" aria-selected="false">Datos</button>
+    <button class="tab" role="tab" id="tab-codigos" data-tab="codigos" aria-selected="false">Códigos</button>
+    <button class="tab" role="tab" id="tab-consumo" data-tab="consumo" aria-selected="false">Consumo y manejo</button>
+    <button class="tab" role="tab" id="tab-conectar" data-tab="conectar" aria-selected="false">Conectar</button>
+  </div>
+</nav>
+
+<main>
+  <div class="wrap">
+    <section class="source" aria-label="Datos cargados">
+      <div class="who">
+        <span class="label">Registro</span>
+        <span class="fname" id="src-name">—</span>
+        <span class="chip" id="src-chip"></span>
+        <span class="notice" id="src-meta"></span>
+      </div>
+      <div class="actions">
+        <label class="btn primary" for="file-in">Importar CSV</label>
+        <input type="file" id="file-in" accept=".csv,.txt,text/csv,text/plain">
+        <button class="btn" id="btn-demo" type="button">Ver ejemplo</button>
+      </div>
+      <p class="error" id="src-error" hidden></p>
+    </section>
+
+    <!-- RESUMEN -->
+    <section class="panel" id="panel-resumen" role="tabpanel" aria-labelledby="tab-resumen">
+      <div class="summary">
+        <div class="card gauge" id="gauge"></div>
+        <div class="card">
+          <div class="section-head"><h2>El recorrido</h2><p id="trip-note"></p></div>
+          <div class="facts" id="facts" style="margin-top:12px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h2>Hallazgos</h2><p>Primero lo que necesita atención</p></div>
+        <div class="findings" id="findings" style="margin-top:8px"></div>
+      </div>
+    </section>
+
+    <!-- DATOS -->
+    <section class="panel" id="panel-datos" role="tabpanel" aria-labelledby="tab-datos" hidden>
+      <div class="section-head"><h2>Datos del recorrido</h2><p>Toca o pasa el cursor sobre una gráfica para ver los valores</p></div>
+      <div class="charts" id="charts"></div>
+      <div class="card">
+        <h3>Valores por señal</h3>
+        <div class="table-wrap" style="margin-top:8px"><table id="stats-table"></table></div>
+      </div>
+      <div class="card">
+        <details id="map-details">
+          <summary>Columnas del archivo</summary>
+          <p class="notice" style="margin-top:6px">La herramienta reconoce las columnas por su nombre, en español o en inglés. Si una señal quedó sin asignar o en la columna equivocada, cámbiala aquí.</p>
+          <div class="table-wrap" style="margin-top:10px"><table id="map-table"></table></div>
+        </details>
+      </div>
+    </section>
+
+    <!-- CÓDIGOS -->
+    <section class="panel" id="panel-codigos" role="tabpanel" aria-labelledby="tab-codigos" hidden>
+      <div class="card">
+        <div class="section-head"><h2>Códigos de falla</h2><p>El CSV no trae los códigos: cópialos desde Car Scanner</p></div>
+        <form class="code-entry" id="code-form" style="margin-top:12px" autocomplete="off">
+          <input type="text" id="code-in" placeholder="Ej.: P0171, P0420" aria-label="Códigos de falla">
+          <div class="seg" role="group" aria-label="Tipo de código">
+            <button type="button" id="kind-stored" aria-pressed="true">Guardado</button>
+            <button type="button" id="kind-pending" aria-pressed="false">Pendiente</button>
+          </div>
+          <button class="btn primary" type="submit">Agregar</button>
+        </form>
+        <p class="error" id="code-error" hidden style="margin-top:8px"></p>
+        <div id="dtc-list" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <h3>Buscar un código</h3>
+        <form class="code-entry" id="lookup-form" style="margin-top:10px" autocomplete="off">
+          <input type="text" id="lookup-in" placeholder="P0300" aria-label="Código a buscar">
+          <button class="btn" type="submit">Buscar</button>
+        </form>
+        <div id="lookup-out" style="margin-top:6px"></div>
+      </div>
+    </section>
+
+    <!-- CONSUMO -->
+    <section class="panel" id="panel-consumo" role="tabpanel" aria-labelledby="tab-consumo" hidden>
+      <div class="card">
+        <div class="section-head"><h2>Consumo estimado</h2><p id="fuel-note"></p></div>
+        <div class="facts" id="fuel-facts" style="margin-top:12px"></div>
+      </div>
+      <div class="two">
+        <div class="card">
+          <h3>Consumo por rango de velocidad</h3>
+          <p class="notice">Litros cada 100 km. La barra más corta es donde tu Outlander rinde más.</p>
+          <div class="bars" id="band-bars" style="margin-top:12px"></div>
+        </div>
+        <div class="card">
+          <h3>Forma de manejo</h3>
+          <div class="facts" id="drive-facts" style="margin-top:12px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Cómo mejorar el rendimiento</h3>
+        <ul class="tips" id="tips" style="margin-top:10px"></ul>
+      </div>
+    </section>
+
+    <!-- CONECTAR -->
+    <section class="panel" id="panel-conectar" role="tabpanel" aria-labelledby="tab-conectar" hidden>
+      <div class="card">
+        <div class="section-head"><h2>Conectar el teléfono y grabar un recorrido</h2><p>Android + ELM327 mini Bluetooth</p></div>
+        <ol class="steps" style="margin-top:10px">
+          <li><div><h3>Enchufa el adaptador</h3><p>El conector OBD está debajo del tablero, del lado del conductor. Enchúfalo con el carro apagado y luego pon la llave en ON. La luz del adaptador debe encender.</p></div></li>
+          <li><div><h3>Empareja el Bluetooth</h3><p>En Ajustes → Bluetooth del teléfono busca <b>OBDII</b> (a veces aparece como OBD2 o V-LINK) y emparéjalo con la clave <b>1234</b>; si no la acepta, usa <b>0000</b>.</p></div></li>
+          <li><div><h3>Instala Car Scanner desde Google Play</h3><p>Busca <b>Car Scanner ELM OBD2</b> en Play Store. No instales el software del enlace de Mega que trae el pedido: son archivos sin verificar que pueden traer malware.</p></div></li>
+          <li><div><h3>Configura la conexión</h3><p>En Car Scanner: Configuración → Adaptador OBDII → tipo <b>Bluetooth</b> → elige OBDII. Deja el protocolo en <b>Automático</b>. Si no conecta, prueba <b>ISO 9141-2</b> y luego <b>ISO 14230-4 KWP (5 baud init)</b>. En el perfil del carro elige Mitsubishi.</p></div></li>
+          <li><div><h3>Lee los códigos</h3><p>Entra en la sección de códigos de falla y copia los guardados y los pendientes en la pestaña <b>Códigos</b> de esta herramienta.</p></div></li>
+          <li><div><h3>Pon en pantalla solo estos parámetros</h3><p>Car Scanner graba solo lo que se ve en pantalla. En la línea K cada lectura tarda, así que con menos parámetros cada uno se actualiza más seguido.</p>
+            <div class="pids"><span>RPM del motor</span><span>Velocidad del vehículo</span><span>Temperatura del refrigerante</span><span>Temperatura del aire de admisión</span><span>Flujo de aire (MAF)</span><span>Posición del acelerador</span><span>Carga calculada</span><span>Avance del encendido</span><span>Ajuste de combustible a corto plazo, banco 1</span><span>Ajuste de combustible a largo plazo, banco 1</span><span>Sensor O2 banco 1 sensor 1 (voltaje)</span><span>Sensor O2 banco 1 sensor 2 (voltaje)</span><span>Voltaje del módulo</span><span>Presión barométrica (si aparece)</span></div></div></li>
+          <li><div><h3>Haz el recorrido de prueba</h3><p>Arranca en frío y deja 2 a 3 minutos en ralentí. Maneja 15 a 20 minutos por ciudad y por avenida o autopista, con una aceleración fuerte solo donde sea seguro. Termina con 1 a 2 minutos en ralentí, ya caliente.</p></div></li>
+          <li><div><h3>Exporta el CSV y súbelo aquí</h3><p>Desconecta para que se guarde la grabación. En Registros, mantén presionado el archivo → Compartir → <b>CSV</b>. Guárdalo y súbelo con <b>Importar CSV</b>.</p></div></li>
+        </ol>
+      </div>
+      <div class="two">
+        <div class="card">
+          <h3>Si no conecta</h3>
+          <ul class="plain">
+            <li><b>UNABLE TO CONNECT</b> o <b>BUS INIT: ERROR</b>: confirma la llave en ON o el motor encendido y elige ISO 9141-2 a mano.</li>
+            <li>Si sigue fallando, el problema suele ser el adaptador. Los clones "v2.1" baratos traen firmware incompleto y a veces no manejan bien la línea K. Las alternativas son un ELM327 v1.5 con chip PIC18F25K80, o un Vgate iCar Pro.</li>
+            <li>Si se desconecta mientras manejas, quita el ahorro de batería para Car Scanner y deja el teléfono cargando.</li>
+            <li>Desenchufa el adaptador cuando no lo uses. Algunos clones consumen batería con el carro apagado.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Qué se puede leer en este carro</h3>
+          <ul class="plain">
+            <li><b>Sí:</b> códigos del motor (guardados, pendientes y freeze frame), monitores de emisiones y datos en vivo del motor.</li>
+            <li><b>No, con OBD genérico:</b> caja automática (temperatura del ATF y cambios), ABS, airbags y 4x4. Usan el protocolo propio de Mitsubishi (MUT).</li>
+            <li>Un código <b>P0700</b> en el motor indica que la caja tiene una falla guardada. Para leerla hace falta un escáner con protocolo Mitsubishi.</li>
+            <li>Si la ECU no reporta alguna señal (por ejemplo el MAF), la herramienta hace el análisis con las demás.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer>Los diagnósticos son orientativos. Se basan en datos OBD genéricos y rangos típicos del 4G69. Antes de cambiar piezas costosas, confirma con un mecánico o con pruebas directas.</footer>
+  </div>
+</main>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- Vehículo ---------- */
+const VEH = { displ: 2.378 };
+
+/* ---------- Señales ---------- */
+const SIG = {
+  rpm:    { label: 'RPM del motor', unit: 'rpm', dec: 0 },
+  speed:  { label: 'Velocidad', unit: 'km/h', dec: 0 },
+  ect:    { label: 'Temperatura del refrigerante', unit: '°C', dec: 0 },
+  iat:    { label: 'Temperatura del aire de admisión', unit: '°C', dec: 0 },
+  maf:    { label: 'Flujo de aire (MAF)', unit: 'g/s', dec: 1 },
+  map:    { label: 'Presión del múltiple (MAP)', unit: 'kPa', dec: 0 },
+  tps:    { label: 'Posición del acelerador', unit: '%', dec: 0 },
+  load:   { label: 'Carga calculada', unit: '%', dec: 0 },
+  timing: { label: 'Avance del encendido', unit: '°', dec: 1 },
+  stft:   { label: 'Ajuste de combustible corto plazo', unit: '%', dec: 1 },
+  ltft:   { label: 'Ajuste de combustible largo plazo', unit: '%', dec: 1 },
+  o2s1:   { label: 'Sonda O2 antes del catalizador', unit: 'V', dec: 2 },
+  o2s2:   { label: 'Sonda O2 después del catalizador', unit: 'V', dec: 2 },
+  volt:   { label: 'Voltaje', unit: 'V', dec: 2 },
+  baro:   { label: 'Presión barométrica', unit: 'kPa', dec: 0 },
+  amb:    { label: 'Temperatura ambiente', unit: '°C', dec: 0 },
+};
+const SIG_KEYS = Object.keys(SIG);
+
+const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+
+function matchSignal(h) {
+  const n = norm(h);
+  const pct = /%/.test(h);
+  const bank2 = /(bank ?2|banco ?2|\bb2)/.test(n);
+  if (/(o2|oxygen|oxigeno|lambda|sonda)/.test(n)) {
+    if (pct || /(trim|ajuste|current|corriente|\bma\b|ratio|equivalen|relacion)/.test(n)) return null;
+    if (bank2) return null;
+    if (/(sensor ?2|\bs2\b|b1s2|posterior|despues|downstream)/.test(n)) return 'o2s2';
+    if (/(sensor ?1|\bs1\b|b1s1|anterior|antes|upstream)/.test(n)) return 'o2s1';
+    return null;
+  }
+  if (/(short term|corto plazo|\bstft\b)/.test(n)) return bank2 ? null : 'stft';
+  if (/(long term|largo plazo|\bltft\b)/.test(n)) return bank2 ? null : 'ltft';
+  if (/(coolant|refrigerante)/.test(n)) return 'ect';
+  if (/(intake air temp|aire de admision|aire admision|\biat\b)/.test(n) && /(temp|°|℉|\(c\)|\(f\))/.test(n + h)) return 'iat';
+  if (/(ambient|ambiente)/.test(n)) return 'amb';
+  if (/(barometric|barometrica)/.test(n)) return 'baro';
+  if (/(mass air flow|\bmaf\b|flujo de aire|caudal de aire|flujo masico)/.test(n)) return 'maf';
+  if (/(manifold.*pressure|presion.*(colector|multiple|admision)|\bmap\b)/.test(n)) return 'map';
+  if (/(timing advance|avance|ignition timing)/.test(n)) return 'timing';
+  if (/(calculated.*load|carga calculada|engine load|carga del motor)/.test(n) && !/absolut/.test(n)) return 'load';
+  if (/(throttle|acelerador|mariposa)/.test(n) && !/(command|comandad|relativ|pedal|actuator|actuador| b\b| c\b)/.test(n)) return 'tps';
+  if (/(\brpm\b|revoluciones|engine speed|velocidad del motor|regimen del motor)/.test(n)) return 'rpm';
+  if (/(vehicle speed|velocidad del vehiculo|speed \(obd\)|^speed|^velocidad)/.test(n) && !/gps/.test(n)) return 'speed';
+  if (/(voltage|voltaje|tension|bateria|battery)/.test(n)) return 'volt';
+  return null;
+}
+
+function converter(key, h) {
+  const n = norm(h);
+  if (['ect', 'iat', 'amb'].includes(key) && /(°f|℉|\(f\)|fahrenheit)/i.test(h + n)) return v => (v - 32) * 5 / 9;
+  if (key === 'speed' && /mph/.test(n)) return v => v * 1.60934;
+  if (key === 'maf' && /lb\/min/.test(n)) return v => v * 7.5599;
+  if ((key === 'map' || key === 'baro') && /psi/.test(n)) return v => v * 6.89476;
+  if ((key === 'map' || key === 'baro') && /inhg/.test(n)) return v => v * 3.38639;
+  if (key === 'volt' && /\(mv\)/.test(n)) return v => v / 1000;
+  if ((key === 'o2s1' || key === 'o2s2') && /\(mv\)/.test(n)) return v => v / 1000;
+  return v => v;
+}
+
+/* ---------- CSV ---------- */
+function parseCSV(text) {
+  text = text.replace(/^﻿/, '');
+  const first = text.split(/\r?\n/, 1)[0];
+  let d = ',', best = -1;
+  for (const c of [',', ';', '\t']) { const k = first.split(c).length; if (k > best) { best = k; d = c; } }
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === d) { row.push(f); f = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += ch;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return { d, rows: rows.filter(r => r.some(x => x.trim() !== '')) };
+}
+function toNum(s, d) {
+  s = String(s ?? '').trim().replace(/^"|"$/g, '');
+  if (!s || s === '-' || s === '—' || /^n\/?a$/i.test(s)) return NaN;
+  if (d !== ',' && /^-?\d+,\d+$/.test(s)) s = s.replace(',', '.');
+  const v = Number(s);
+  return Number.isFinite(v) ? v : NaN;
+}
+function parseTimes(arr) {
+  const nums = arr.map(s => { const t = String(s).trim(); return /^-?\d+([.,]\d+)?$/.test(t) ? Number(t.replace(',', '.')) : NaN; });
+  const share = nums.filter(Number.isFinite).length / Math.max(1, arr.length);
+  if (share > 0.8) {
+    const base = nums.find(Number.isFinite);
+    let scale = 1;
+    if (base > 1e12) scale = 1 / 1000;
+    else if (base <= 1e9) {
+      const diffs = [];
+      for (let i = 1; i < nums.length && diffs.length < 400; i++) { const dd = nums[i] - nums[i - 1]; if (dd > 0) diffs.push(dd); }
+      diffs.sort((a, b) => a - b);
+      const med = diffs[Math.floor(diffs.length / 2)] || 1;
+      if (med >= 20) scale = 1 / 1000;
+    }
+    return nums.map(x => Number.isFinite(x) ? x * scale : NaN);
+  }
+  return arr.map(s => {
+    const t = String(s).trim();
+    const ms = Date.parse(t.replace(' ', 'T'));
+    if (!isNaN(ms)) return ms / 1000;
+    const m = t.match(/(\d{1,2}):(\d{2}):(\d{2})(?:[.,](\d+))?/);
+    if (m) return (+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]) + (m[4] ? Number('0.' + m[4]) : 0);
+    return NaN;
+  });
+}
+
+/* Convierte un CSV (formato ancho o largo) en columnas: [{name, pts:[[t,v]]}] */
+function csvToColumns(text) {
+  const meta = {};
+  const all = text.replace(/^﻿/, '').split(/\r?\n/);
+  while (all.length && all[0].trim().startsWith('#')) {
+    all.shift().replace(/^\s*#/, '').split(';').forEach(p => { const i = p.indexOf('='); if (i > 0) meta[p.slice(0, i).trim()] = p.slice(i + 1).trim(); });
+  }
+  text = all.join('\n');
+  const { d, rows } = parseCSV(text);
+  if (rows.length < 3) throw new Error('El archivo tiene muy pocas filas para analizar.');
+  const header = rows[0].map(h => h.trim().replace(/^"|"$/g, ''));
+  const hn = header.map(norm);
+  let timeIdx = -1, timeBest = 0;
+  hn.forEach((h, i) => {
+    if (!/^(time|tiempo|seconds|segundos|secs|device time|gps time|timestamp|fecha|hora|date)/.test(h)) return;
+    const sample = rows.slice(1, 60).map(r => r[i] ?? '');
+    const ok = parseTimes(sample).filter(Number.isFinite).length;
+    if (ok > timeBest) { timeBest = ok; timeIdx = i; }
+  });
+  const pidIdx = hn.findIndex(h => /^(pid|name|nombre|parametro|parameter|sensor)$/.test(h));
+  const valIdx = hn.findIndex(h => /^(value|valor)$/.test(h));
+  const unitIdx = hn.findIndex(h => /^(units?|unidad(es)?)$/.test(h));
+  const cols = [];
+  if (pidIdx >= 0 && valIdx >= 0) {
+    // formato largo: una fila por lectura
+    const times = parseTimes(rows.slice(1).map(r => timeIdx >= 0 ? r[timeIdx] : ''));
+    const map = new Map();
+    rows.slice(1).forEach((r, i) => {
+      const name = (r[pidIdx] || '').trim().replace(/^"|"$/g, '') + (unitIdx >= 0 && r[unitIdx] ? ' (' + r[unitIdx].trim().replace(/^"|"$/g, '') + ')' : '');
+      const v = toNum(r[valIdx], d);
+      const t = timeIdx >= 0 ? times[i] : i;
+      if (!name || !Number.isFinite(v) || !Number.isFinite(t)) return;
+      if (!map.has(name)) map.set(name, []);
+      map.get(name).push([t, v]);
+    });
+    for (const [name, pts] of map) cols.push({ name, pts });
+  } else {
+    const times = timeIdx >= 0 ? parseTimes(rows.slice(1).map(r => r[timeIdx])) : rows.slice(1).map((_, i) => i);
+    header.forEach((name, c) => {
+      if (c === timeIdx || !name) return;
+      const pts = [];
+      rows.slice(1).forEach((r, i) => { const v = toNum(r[c], d); const t = times[i]; if (Number.isFinite(v) && Number.isFinite(t)) pts.push([t, v]); });
+      if (pts.length >= 3) cols.push({ name, pts });
+    });
+  }
+  if (!cols.length) throw new Error('No encontré columnas con números. Exporta la grabación de Car Scanner en formato CSV.');
+  let t0 = Infinity;
+  cols.forEach(c => c.pts.forEach(p => { if (p[0] < t0) t0 = p[0]; }));
+  cols.forEach(c => { c.pts.forEach(p => { p[0] -= t0; }); c.pts.sort((a, b) => a[0] - b[0]); });
+  return { cols, noTime: timeIdx < 0 && !(pidIdx >= 0 && valIdx >= 0), meta };
+}
+
+function autoMap(cols) {
+  const m = {};
+  cols.forEach((c, i) => {
+    const k = matchSignal(c.name);
+    if (!k) return;
+    if (m[k] === undefined || cols[m[k]].pts.length < c.pts.length) m[k] = i;
+  });
+  return m;
+}
+
+/* ---------- Línea de tiempo a 1 s ---------- */
+function buildSignals(cols, mapping) {
+  const sig = {};
+  for (const k of SIG_KEYS) {
+    const i = mapping[k];
+    if (i === undefined || i === null || i < 0 || !cols[i]) continue;
+    const conv = converter(k, cols[i].name);
+    sig[k] = cols[i].pts.map(([t, v]) => [t, conv(v)]);
+  }
+  return sig;
+}
+function buildTimeline(sig, dt = 1, stale = 6) {
+  let tMax = 0;
+  for (const k in sig) { const p = sig[k]; if (p.length) tMax = Math.max(tMax, p[p.length - 1][0]); }
+  const N = Math.floor(tMax / dt) + 1;
+  const rows = Array.from({ length: N }, (_, i) => ({ t: i * dt }));
+  for (const k in sig) {
+    const p = sig[k]; let j = 0;
+    for (const r of rows) {
+      while (j + 1 < p.length && p[j + 1][0] <= r.t) j++;
+      r[k] = (p[j] && p[j][0] <= r.t && r.t - p[j][0] <= stale) ? p[j][1] : NaN;
+    }
+  }
+  return rows;
+}
+
+/* ---------- Estadística ---------- */
+const fin = Number.isFinite;
+const vals = (rows, k, pred) => rows.filter(r => fin(r[k]) && (!pred || pred(r))).map(r => r[k]);
+function quant(a, q) { if (!a.length) return NaN; const s = [...a].sort((x, y) => x - y); const i = (s.length - 1) * q; const lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); }
+const median = a => quant(a, 0.5);
+const mean = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN;
+function std(a) { if (a.length < 2) return NaN; const m = mean(a); return Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1)); }
+const fmt = (v, dec = 0) => fin(v) ? v.toLocaleString('es-VE', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : '—';
+const sgn = (v, dec = 1) => fin(v) ? (v > 0 ? '+' : '') + fmt(v, dec) : '—';
+function mmss(s) { s = Math.round(s); const m = Math.floor(s / 60); return m + ':' + String(s % 60).padStart(2, '0'); }
+function crossings(a, th) { let c = 0; for (let i = 1; i < a.length; i++) if ((a[i - 1] - th) * (a[i] - th) < 0) c++; return c; }
+
+/* ---------- Estados del motor ---------- */
+function classify(rows) {
+  const tpsRun = vals(rows, 'tps', r => r.rpm > 400);
+  const tpsMin = tpsRun.length ? quant(tpsRun, 0.03) : NaN;
+  for (const r of rows) {
+    r.running = fin(r.rpm) ? r.rpm > 400 : fin(r.speed) && r.speed > 0;
+    r.warm = fin(r.ect) ? r.ect >= 75 : null;
+    const closed = !fin(r.tps) || r.tps <= tpsMin + 2.5;
+    r.decel = r.running && closed && fin(r.speed) && r.speed > 15 && fin(r.rpm) && r.rpm > 1250;
+    r.idle = r.running && (!fin(r.speed) || r.speed <= 2) && fin(r.rpm) && r.rpm < 1400 && (!fin(r.tps) || r.tps <= tpsMin + 4);
+    r.wot = fin(r.tps) ? r.tps >= 70 : (fin(r.load) && r.load >= 85);
+    r.cruise = r.running && !r.decel && !r.wot && fin(r.speed) && r.speed >= 35 && fin(r.rpm) && r.rpm >= 1300 && r.rpm <= 3300;
+  }
+  for (let i = 0; i < rows.length; i++) {
+    const a = rows[Math.max(0, i - 1)].speed, b = rows[Math.min(rows.length - 1, i + 1)].speed;
+    rows[i].acc = fin(a) && fin(b) ? (b - a) / 3.6 / ((Math.min(rows.length - 1, i + 1) - Math.max(0, i - 1)) || 1) : NaN;
+  }
+  return { tpsMin };
+}
+
+/* ---------- Base de códigos ---------- */
+const DTC = {
+  P0010: ['Circuito del actuador del árbol de levas de admisión (banco 1)'],
+  P0011: ['Árbol de levas de admisión: tiempo demasiado adelantado o falla de rendimiento (banco 1)', 'Aceite bajo o sucio, válvula de control de aceite (OCV) del MIVEC, cableado.'],
+  P0012: ['Árbol de levas de admisión: tiempo demasiado retrasado (banco 1)', 'Aceite bajo o sucio, válvula OCV, correa de tiempo corrida un diente.'],
+  P0016: ['Correlación entre cigüeñal y árbol de levas (banco 1)', 'Correa de tiempo estirada o corrida, sensores CKP/CMP. No sigas manejando largo tiempo sin revisar la correa.'],
+  P0030: ['Circuito del calentador de la sonda O2 (banco 1, sensor 1)', 'Resistencia de la sonda abierta, fusible, conector.'],
+  P0031: ['Calentador de la sonda O2: circuito bajo (banco 1, sensor 1)'],
+  P0032: ['Calentador de la sonda O2: circuito alto (banco 1, sensor 1)'],
+  P0036: ['Circuito del calentador de la sonda O2 (banco 1, sensor 2)'],
+  P0037: ['Calentador de la sonda O2: circuito bajo (banco 1, sensor 2)'],
+  P0038: ['Calentador de la sonda O2: circuito alto (banco 1, sensor 2)'],
+  P0100: ['Circuito del sensor de flujo de aire (MAF)', 'Conector, cableado o sensor dañado.'],
+  P0101: ['Sensor de flujo de aire: rango o rendimiento', 'Sensor sucio, filtro de aire tapado, entrada de aire después del sensor.'],
+  P0102: ['Sensor de flujo de aire: señal baja'],
+  P0103: ['Sensor de flujo de aire: señal alta'],
+  P0105: ['Circuito del sensor de presión del múltiple (MAP) o barométrico'],
+  P0106: ['Sensor MAP o barométrico: rango o rendimiento'],
+  P0107: ['Sensor MAP o barométrico: señal baja'],
+  P0108: ['Sensor MAP o barométrico: señal alta'],
+  P0110: ['Circuito del sensor de temperatura del aire de admisión'],
+  P0111: ['Sensor de temperatura del aire de admisión: rango o rendimiento'],
+  P0112: ['Sensor de temperatura del aire de admisión: señal baja'],
+  P0113: ['Sensor de temperatura del aire de admisión: señal alta', 'Sensor desconectado o cable abierto.'],
+  P0115: ['Circuito del sensor de temperatura del refrigerante'],
+  P0116: ['Sensor de temperatura del refrigerante: rango o rendimiento'],
+  P0117: ['Sensor de temperatura del refrigerante: señal baja'],
+  P0118: ['Sensor de temperatura del refrigerante: señal alta'],
+  P0120: ['Circuito del sensor de posición del acelerador (TPS)'],
+  P0121: ['Sensor de posición del acelerador: rango o rendimiento'],
+  P0122: ['Sensor de posición del acelerador: señal baja'],
+  P0123: ['Sensor de posición del acelerador: señal alta'],
+  P0125: ['Temperatura del refrigerante insuficiente para el control en lazo cerrado', 'Termostato abierto o sensor de temperatura del refrigerante.'],
+  P0128: ['Termostato: el refrigerante no llega a la temperatura de regulación', 'Termostato pegado abierto (lo más común), sensor de temperatura, ventilador encendido todo el tiempo.'],
+  P0130: ['Circuito de la sonda O2 (banco 1, sensor 1)'],
+  P0131: ['Sonda O2 con voltaje bajo (banco 1, sensor 1)', 'Mezcla pobre real, entrada de aire, fuga de escape antes de la sonda o sonda dañada.'],
+  P0132: ['Sonda O2 con voltaje alto (banco 1, sensor 1)', 'Mezcla rica real, sonda contaminada o cable en corto.'],
+  P0133: ['Sonda O2 con respuesta lenta (banco 1, sensor 1)', 'Sonda envejecida, típica después de 100.000 km.'],
+  P0134: ['Sonda O2 sin actividad (banco 1, sensor 1)', 'Sonda muerta, calentador dañado o cableado.'],
+  P0135: ['Circuito del calentador de la sonda O2 (banco 1, sensor 1)', 'Calentador de la sonda abierto, fusible o conector.'],
+  P0136: ['Circuito de la sonda O2 (banco 1, sensor 2)'],
+  P0137: ['Sonda O2 con voltaje bajo (banco 1, sensor 2)', 'Fuga de escape, catalizador muy gastado o sonda dañada.'],
+  P0138: ['Sonda O2 con voltaje alto (banco 1, sensor 2)'],
+  P0139: ['Sonda O2 con respuesta lenta (banco 1, sensor 2)'],
+  P0140: ['Sonda O2 sin actividad (banco 1, sensor 2)'],
+  P0141: ['Circuito del calentador de la sonda O2 (banco 1, sensor 2)', 'Calentador de la sonda trasera abierto, fusible o conector.'],
+  P0170: ['Falla en el ajuste de combustible (banco 1)'],
+  P0171: ['Sistema demasiado pobre (banco 1)', 'Entrada de aire falsa (mangueras de vacío, PCV, empacadura del múltiple, manguera del servofreno), sensor de flujo de aire sucio, bomba o filtro de gasolina débil, inyectores sucios.'],
+  P0172: ['Sistema demasiado rico (banco 1)', 'Inyector goteando, presión de gasolina alta, válvula de purga EVAP pegada, filtro de aire tapado, sensor de flujo de aire leyendo de más.'],
+  P0201: ['Circuito del inyector, cilindro 1'], P0202: ['Circuito del inyector, cilindro 2'], P0203: ['Circuito del inyector, cilindro 3'], P0204: ['Circuito del inyector, cilindro 4'],
+  P0217: ['Sobrecalentamiento del motor', 'Detén el carro si la aguja sube. Nivel de refrigerante, ventilador, termostato, bomba de agua, radiador.'],
+  P0230: ['Circuito primario de la bomba de gasolina', 'Relé o fusible de la bomba, cableado.'],
+  P0300: ['Fallo de encendido aleatorio o en varios cilindros', 'Bujías, bobinas o cables de bujía, entrada de aire, presión de gasolina baja, compresión baja.'],
+  P0301: ['Fallo de encendido en el cilindro 1', 'Bujía, bobina o cable, inyector del cilindro 1. Intercambia bujía o bobina con otro cilindro y mira si el código se mueve.'],
+  P0302: ['Fallo de encendido en el cilindro 2', 'Bujía, bobina o cable, inyector del cilindro 2. Intercambia bujía o bobina con otro cilindro y mira si el código se mueve.'],
+  P0303: ['Fallo de encendido en el cilindro 3', 'Bujía, bobina o cable, inyector del cilindro 3. Intercambia bujía o bobina con otro cilindro y mira si el código se mueve.'],
+  P0304: ['Fallo de encendido en el cilindro 4', 'Bujía, bobina o cable, inyector del cilindro 4. Intercambia bujía o bobina con otro cilindro y mira si el código se mueve.'],
+  P0325: ['Circuito del sensor de detonación 1 (banco 1)'], P0326: ['Sensor de detonación: rango o rendimiento'], P0327: ['Sensor de detonación: señal baja'], P0328: ['Sensor de detonación: señal alta'],
+  P0335: ['Circuito del sensor de posición del cigüeñal (CKP)', 'Sensor, cableado o rueda fónica. Puede apagar el motor o impedir el arranque.'],
+  P0336: ['Sensor de posición del cigüeñal: rango o rendimiento'], P0337: ['Sensor de posición del cigüeñal: señal baja'], P0338: ['Sensor de posición del cigüeñal: señal alta'], P0339: ['Sensor de posición del cigüeñal: intermitente'],
+  P0340: ['Circuito del sensor de posición del árbol de levas (CMP)', 'Sensor, cableado o correa de tiempo.'],
+  P0341: ['Sensor del árbol de levas: rango o rendimiento'], P0342: ['Sensor del árbol de levas: señal baja'], P0343: ['Sensor del árbol de levas: señal alta'],
+  P0350: ['Circuito primario o secundario de las bobinas de encendido'],
+  P0351: ['Circuito de la bobina de encendido A'], P0352: ['Circuito de la bobina de encendido B'], P0353: ['Circuito de la bobina de encendido C'], P0354: ['Circuito de la bobina de encendido D'],
+  P0400: ['Falla en el flujo de recirculación de gases (EGR)'], P0401: ['Flujo de EGR insuficiente', 'Conductos de EGR tapados con carbón, válvula EGR.'], P0402: ['Flujo de EGR excesivo'], P0403: ['Circuito de control de la EGR'],
+  P0420: ['Eficiencia del catalizador por debajo del límite (banco 1)', 'Catalizador gastado. Antes de cambiarlo descarta fugas de escape, sonda trasera dañada y fallos de encendido, que lo dañan.'],
+  P0421: ['Eficiencia del catalizador de calentamiento por debajo del límite (banco 1)'],
+  P0440: ['Falla en el sistema de control de emisiones evaporativas (EVAP)'],
+  P0441: ['EVAP: flujo de purga incorrecto', 'Válvula de purga, mangueras del canister.'],
+  P0442: ['EVAP: fuga pequeña', 'Tapa de gasolina, mangueras del canister, válvula de ventilación.'],
+  P0443: ['Circuito de la válvula de purga EVAP'],
+  P0446: ['Circuito de control de ventilación EVAP'],
+  P0450: ['Sensor de presión EVAP'],
+  P0455: ['EVAP: fuga grande', 'Tapa de gasolina floja o sin sello, manguera suelta.'],
+  P0456: ['EVAP: fuga muy pequeña', 'Tapa de gasolina, sellos.'],
+  P0457: ['EVAP: fuga detectada (tapa de gasolina floja o ausente)'],
+  P0460: ['Circuito del sensor de nivel de gasolina'], P0461: ['Sensor de nivel de gasolina: rango o rendimiento'], P0462: ['Sensor de nivel de gasolina: señal baja'], P0463: ['Sensor de nivel de gasolina: señal alta'],
+  P0480: ['Circuito de control del ventilador 1'],
+  P0500: ['Sensor de velocidad del vehículo (VSS)', 'Sensor, cableado. También afecta los cambios de la caja automática y el velocímetro.'],
+  P0501: ['Sensor de velocidad del vehículo: rango o rendimiento'], P0502: ['Sensor de velocidad del vehículo: señal baja'], P0503: ['Sensor de velocidad del vehículo: señal intermitente o errática'],
+  P0505: ['Sistema de control del ralentí', 'Cuerpo de aceleración sucio, motor de control de ralentí (ISC), entradas de aire.'],
+  P0506: ['Ralentí más bajo de lo esperado', 'Cuerpo de aceleración sucio, control de ralentí.'],
+  P0507: ['Ralentí más alto de lo esperado', 'Entrada de aire, control de ralentí, cuerpo de aceleración.'],
+  P0510: ['Interruptor de mariposa cerrada'],
+  P0550: ['Circuito del sensor de presión de la dirección hidráulica'],
+  P0560: ['Voltaje del sistema'], P0562: ['Voltaje del sistema bajo', 'Batería, alternador, bornes o tierras.'], P0563: ['Voltaje del sistema alto', 'Regulador del alternador.'],
+  P0600: ['Enlace de comunicación serial'], P0601: ['Error de memoria del módulo de control (checksum)'], P0603: ['Error de memoria KAM del módulo de control'], P0604: ['Error de RAM del módulo de control'], P0605: ['Error de ROM del módulo de control'], P0606: ['Falla del procesador del módulo de control'],
+  P0620: ['Circuito de control del generador (alternador)'], P0621: ['Circuito de la luz "L" del generador'], P0622: ['Circuito de campo "F" del generador'],
+  P0700: ['La caja automática tiene una falla guardada (el TCM pide encender la luz)', 'El código real está en el módulo de la caja. Hace falta un escáner con protocolo Mitsubishi para leerlo. Revisa nivel y estado del ATF.'],
+  P0705: ['Circuito del sensor de rango de la caja (interruptor P-R-N-D)'], P0706: ['Sensor de rango de la caja: rango o rendimiento'],
+  P0710: ['Circuito del sensor de temperatura del fluido de la caja'], P0711: ['Sensor de temperatura del ATF: rango o rendimiento'], P0712: ['Sensor de temperatura del ATF: señal baja'], P0713: ['Sensor de temperatura del ATF: señal alta'],
+  P0715: ['Circuito del sensor de velocidad de entrada (turbina)'], P0717: ['Sensor de velocidad de entrada: sin señal'],
+  P0720: ['Circuito del sensor de velocidad de salida'], P0722: ['Sensor de velocidad de salida: sin señal'],
+  P0725: ['Entrada de velocidad del motor hacia el módulo de la caja'],
+  P0730: ['Relación de marcha incorrecta', 'Nivel o estado del ATF, desgaste interno, solenoides.'],
+  P0731: ['Relación incorrecta en 1.ª', 'Nivel o estado del ATF, desgaste de embragues.'], P0732: ['Relación incorrecta en 2.ª', 'Nivel o estado del ATF, desgaste de embragues.'], P0733: ['Relación incorrecta en 3.ª', 'Nivel o estado del ATF, desgaste de embragues.'], P0734: ['Relación incorrecta en 4.ª', 'Nivel o estado del ATF, desgaste de embragues.'],
+  P0740: ['Circuito del embrague del convertidor de par (TCC)'], P0741: ['Embrague del convertidor de par: rendimiento o pegado sin acoplar', 'ATF viejo, solenoide del convertidor.'], P0742: ['Embrague del convertidor de par pegado acoplado'], P0743: ['Embrague del convertidor de par: falla eléctrica'],
+  P0750: ['Solenoide de cambio A'], P0755: ['Solenoide de cambio B'], P0760: ['Solenoide de cambio C'], P0765: ['Solenoide de cambio D'], P0770: ['Solenoide de cambio E'],
+  P1400: ['Sensor de presión diferencial del múltiple (código Mitsubishi)'],
+  P1500: ['Circuito del terminal FR del alternador (código Mitsubishi)', 'Cable o conector entre el alternador y la ECU, alternador.'],
+  P1603: ['Línea de respaldo de la batería (código Mitsubishi)', 'Aparece después de desconectar la batería; si vuelve, revisa fusibles y la alimentación permanente de la ECU.'],
+  P1610: ['Inmovilizador (código Mitsubishi)', 'Llave no reconocida o módulo del inmovilizador.'],
+  P1751: ['Relé de control de la caja automática (código Mitsubishi)', 'Relé, fusible o alimentación del módulo de la caja.'],
+};
+const SYS = { P: 'Motor y caja', B: 'Carrocería', C: 'Chasis (frenos, ABS, suspensión)', U: 'Red de comunicación entre módulos' };
+function describe(code) {
+  const c = code.toUpperCase();
+  if (DTC[c]) return { title: DTC[c][0], causes: DTC[c][1] || '', known: true };
+  const sys = c[0], d1 = c[1], d2 = c[2];
+  if (sys === 'P' && (d1 === '1' || d1 === '3')) return { title: 'Código propio del fabricante (Mitsubishi)', causes: 'Su significado depende del fabricante. Búscalo con el VIN en un manual de servicio o en un escáner con protocolo Mitsubishi.', known: false };
+  const groups = { '0': 'Control de combustible, aire o emisiones auxiliares', '1': 'Medición de combustible y aire', '2': 'Medición de combustible y aire (circuito de inyectores)', '3': 'Sistema de encendido o fallos de encendido', '4': 'Controles auxiliares de emisiones', '5': 'Velocidad del vehículo, ralentí y entradas auxiliares', '6': 'Computadora y salidas auxiliares', '7': 'Caja de cambios', '8': 'Caja de cambios', '9': 'Caja de cambios', A: 'Sistema híbrido', B: 'Sistema híbrido', C: 'Sistema híbrido' };
+  if (sys === 'P') return { title: 'Código genérico de ' + (groups[d2] || 'motor').toLowerCase(), causes: 'No está en la base de esta herramienta. La familia indica el sistema; búscalo con el código exacto.', known: false };
+  return { title: 'Código de ' + (SYS[sys] || 'otro sistema').toLowerCase(), causes: 'Este módulo no se lee con OBD genérico en tu Outlander; hace falta un escáner con protocolo Mitsubishi.', known: false };
+}
+const DTC_RE = /^[PBCU][0-3][0-9A-F]{3}$/;
+
+/* ---------- Análisis ---------- */
+function analyze(state) {
+  const rows = state.rows, F = [];
+  const has = k => rows.some(r => fin(r[k]));
+  const run = rows.filter(r => r.running);
+  const runMin = run.length / 60;
+  const add = (sev, area, title, body, evidence = [], todo = []) => F.push({ sev, area, title, body, evidence, todo });
+
+  // Códigos
+  const stored = state.codes.filter(c => c.kind === 'stored'), pending = state.codes.filter(c => c.kind === 'pending');
+  for (const c of state.codes) {
+    const d = describe(c.code);
+    add(c.kind === 'stored' ? 'crit' : 'warn', c.kind === 'stored' ? 'Código guardado' : 'Código pendiente', c.code + ' · ' + d.title,
+      c.kind === 'stored' ? 'La computadora confirmó la falla y enciende la luz de check engine.' : 'La computadora vio la falla una vez y la confirmará si se repite en el próximo ciclo.',
+      [], d.causes ? [d.causes] : []);
+  }
+
+  // Temperatura del motor
+  if (has('ect') && run.length > 30) {
+    const ect = vals(run, 'ect');
+    const eMax = Math.max(...ect), eStart = ect[0];
+    const tWarm = run.find(r => r.ect >= 80);
+    const warmMin = tWarm && eStart < 50 ? (tWarm.t - run[0].t) / 60 : NaN;
+    const cruiseWarm = vals(rows, 'ect', r => r.cruise && r.t > (tWarm ? tWarm.t : Infinity));
+    if (eMax >= 108) add('crit', 'Enfriamiento', 'Temperatura del motor alta', 'El refrigerante pasó de 108 °C. Seguir manejando así puede dañar la empacadura de la culata.', ['máx. ' + fmt(eMax) + ' °C'], ['Revisa el nivel de refrigerante con el motor frío.', 'Confirma que el electroventilador arranca cerca de los 100 °C.', 'Revisa el termostato, la bomba de agua y el radiador.']);
+    else if (eMax >= 102) add('warn', 'Enfriamiento', 'Temperatura un poco alta', 'Llegó a más de 102 °C. En tráfico con el aire acondicionado puede pasar un momento, pero no debería mantenerse.', ['máx. ' + fmt(eMax) + ' °C'], ['Revisa nivel de refrigerante y que el ventilador encienda.']);
+    if (eMax < 75 && runMin >= 12) add('warn', 'Enfriamiento', 'El motor no llega a su temperatura', 'Después de ' + fmt(runMin) + ' minutos encendido no pasó de ' + fmt(eMax) + ' °C. Lo normal es 80 a 95 °C. El termostato pegado abierto es la causa más común. Hace gastar más gasolina y la calefacción sale tibia.', ['máx. ' + fmt(eMax) + ' °C', fmt(runMin) + ' min encendido'], ['Cambia el termostato (en el 4G69 abre alrededor de 82 °C).', 'Si el termostato está bien, revisa el sensor de temperatura del refrigerante.']);
+    else if (cruiseWarm.length > 30 && median(cruiseWarm) < 77) add('warn', 'Enfriamiento', 'La temperatura baja al rodar', 'El motor calentó, pero en avenida bajó a ' + fmt(median(cruiseWarm)) + ' °C. Es la señal típica de un termostato que no cierra bien.', ['mediana en crucero ' + fmt(median(cruiseWarm)) + ' °C'], ['Cambia el termostato.']);
+    else if (eMax >= 78 && eMax < 102) add('ok', 'Enfriamiento', 'Temperatura del motor normal', fin(warmMin) ? 'Llegó a 80 °C en ' + fmt(warmMin, 1) + ' minutos y se mantuvo en ' + fmt(quant(vals(rows, 'ect', r => r.warm), 0.1)) + ' a ' + fmt(eMax) + ' °C.' : 'Se mantuvo entre ' + fmt(quant(vals(rows, 'ect', r => r.warm), 0.1)) + ' y ' + fmt(eMax) + ' °C.', ['máx. ' + fmt(eMax) + ' °C']);
+    else if (eMax < 75) add('info', 'Enfriamiento', 'El motor no terminó de calentar', 'El registro es muy corto para evaluar el termostato. Graba al menos 15 minutos desde el arranque en frío.', ['máx. ' + fmt(eMax) + ' °C']);
+  }
+
+  // Ajustes de combustible
+  if (has('stft') || has('ltft')) {
+    const tot = r => (fin(r.stft) ? r.stft : 0) + (fin(r.ltft) ? r.ltft : 0);
+    const ok = r => (fin(r.stft) || fin(r.ltft)) && r.warm !== false && !r.decel && !r.wot && r.running;
+    const idle = rows.filter(r => ok(r) && r.idle).map(tot);
+    const cru = rows.filter(r => ok(r) && r.cruise).map(tot);
+    const all = rows.filter(ok).map(tot);
+    const iM = idle.length >= 15 ? median(idle) : NaN, cM = cru.length >= 15 ? median(cru) : NaN, aM = median(all);
+    const lt = vals(rows, 'ltft', ok);
+    const ev = ['ralentí ' + sgn(iM) + ' %', 'crucero ' + sgn(cM) + ' %'];
+    if (lt.length) ev.push('LTFT mediana ' + sgn(median(lt)) + ' %');
+    const label = (has('stft') && has('ltft')) ? '' : ' Solo encontré ' + (has('stft') ? 'el ajuste a corto plazo' : 'el ajuste a largo plazo') + ', así que la lectura es menos completa.';
+    if (all.length < 20) add('info', 'Mezcla', 'Pocos datos de ajuste de combustible', 'Hace falta más tiempo con el motor caliente para evaluar la mezcla.' + label);
+    else if (Math.abs(aM) >= 20 || Math.abs(iM) >= 22) add('crit', 'Mezcla', aM > 0 ? 'Mezcla muy pobre' : 'Mezcla muy rica', 'La computadora está corrigiendo ' + sgn(aM) + ' % la gasolina. Con ese nivel ya aparecen ' + (aM > 0 ? 'P0171' : 'P0172') + ' y fallos de encendido.' + label, ev,
+      aM > 0 ? ['Busca entradas de aire: mangueras de vacío, PCV, manguera del servofreno, empacadura del múltiple.', 'Limpia el sensor de flujo de aire.', 'Mide la presión de gasolina (bomba y filtro).'] : ['Revisa inyectores goteando y la presión de gasolina.', 'Revisa la válvula de purga del canister.', 'Cambia el filtro de aire si está sucio.']);
+    else if (fin(iM) && fin(cM) && iM >= 10 && iM - cM >= 6) add('warn', 'Mezcla', 'Posible entrada de aire falsa', 'En ralentí la computadora agrega ' + sgn(iM) + ' % de gasolina y en crucero solo ' + sgn(cM) + ' %. Cuando la corrección baja al subir las RPM, lo más probable es aire que entra sin pasar por el sensor de flujo. A bajas RPM ese aire pesa más.' + label, ev,
+      ['Con el motor en ralentí, rocía agua jabonosa o limpiador de carburador en mangueras de vacío, PCV, manguera del servofreno y empacadura del múltiple. Si las RPM cambian, encontraste la fuga.', 'Revisa la abrazadera y la manguera entre el sensor de flujo y el cuerpo de aceleración.', 'Después de reparar, graba otro recorrido: el ajuste debería volver a ±5 %.']);
+    else if (fin(iM) && fin(cM) && iM >= 10 && cM >= 10) add('warn', 'Mezcla', 'Mezcla pobre en todo el rango', 'La corrección es positiva en ralentí (' + sgn(iM) + ' %) y en crucero (' + sgn(cM) + ' %). Apunta a falta de gasolina o a un sensor de flujo que mide de menos.' + label, ev, ['Mide la presión de gasolina; revisa bomba y filtro.', 'Limpia el sensor de flujo de aire con limpiador para MAF.', 'Limpia los inyectores.']);
+    else if (aM <= -10) add('warn', 'Mezcla', 'Mezcla rica', 'La computadora está quitando ' + sgn(aM) + ' % de gasolina.' + label, ev, ['Revisa inyectores, presión de gasolina y la válvula de purga del canister.', 'Revisa el filtro de aire.']);
+    else if (aM >= 10) add('warn', 'Mezcla', 'Mezcla algo pobre', 'La corrección promedio es ' + sgn(aM) + ' %.' + label, ev, ['Busca entradas de aire y limpia el sensor de flujo de aire.']);
+    else add('ok', 'Mezcla', 'Ajuste de combustible normal', 'La corrección se mantiene en ' + sgn(aM) + ' %, dentro de ±10 %.' + label, ev);
+  }
+
+  // Sonda delantera
+  const clRows = rows.filter(r => r.running && r.warm !== false && !r.decel && !r.wot && fin(r.o2s1));
+  if (clRows.length >= 30) {
+    const o = clRows.map(r => r.o2s1);
+    const lo = quant(o, 0.05), hi = quant(o, 0.95), sd = std(o);
+    const ev = ['rango ' + fmt(lo, 2) + '–' + fmt(hi, 2) + ' V', 'desv. ' + fmt(sd, 2) + ' V'];
+    if (hi < 0.55) add('warn', 'Sonda O2', 'La sonda delantera marca pobre casi siempre', 'No sube de ' + fmt(hi, 2) + ' V. Puede ser mezcla pobre real, una fuga de escape antes de la sonda o una sonda débil.', ev, ['Compara con los ajustes de combustible: si también son altos, la mezcla es pobre de verdad.', 'Revisa fugas en el múltiple de escape.']);
+    else if (lo > 0.35) add('warn', 'Sonda O2', 'La sonda delantera marca rico casi siempre', 'No baja de ' + fmt(lo, 2) + ' V. Puede ser mezcla rica o una sonda contaminada.', ev, ['Revisa inyectores y presión de gasolina.', 'Si la mezcla está bien, cambia la sonda.']);
+    else if (sd < 0.1) add('warn', 'Sonda O2', 'Sonda delantera perezosa', 'Casi no oscila. Una sonda vieja responde lento y la computadora controla peor la mezcla.', ev, ['Cambia la sonda delantera (banco 1, sensor 1).']);
+    else add('ok', 'Sonda O2', 'Sonda delantera activa', 'Oscila entre ' + fmt(lo, 2) + ' y ' + fmt(hi, 2) + ' V, como debe hacerlo en lazo cerrado. Por la velocidad de la línea K no se puede medir su tiempo de respuesta.', ev);
+  }
+
+  // Catalizador
+  const catRows = rows.filter(r => r.running && r.warm === true && !r.decel && !r.wot && fin(r.o2s2));
+  if (catRows.length >= 60) {
+    const s2 = catRows.map(r => r.o2s2), s1 = catRows.filter(r => fin(r.o2s1)).map(r => r.o2s1);
+    const sd2 = std(s2), sd1 = std(s1), ratio = fin(sd1) && sd1 > 0 ? sd2 / sd1 : NaN;
+    const c1 = crossings(s1, 0.45) / Math.max(1, s1.length), c2 = crossings(s2, 0.45) / Math.max(1, s2.length);
+    const ev = ['mediana ' + fmt(median(s2), 2) + ' V', 'oscilación trasera/delantera ' + fmt(ratio, 2)];
+    if (quant(s2, 0.95) < 0.45) add('warn', 'Catalizador', 'Sonda trasera siempre baja', 'La sonda después del catalizador se queda por debajo de 0,45 V. Suele indicar un catalizador sin oxígeno almacenado, una fuga de escape o una sonda trasera dañada.', ev, ['Revisa fugas de escape entre el catalizador y la sonda.', 'Prueba la sonda trasera.']);
+    else if (fin(ratio) && ratio > 0.75 && c2 > 0.6 * c1) add('warn', 'Catalizador', 'Catalizador con baja eficiencia', 'La sonda trasera oscila casi igual que la delantera. Un catalizador sano la deja estable. Es la antesala del código P0420.', ev, ['Descarta fallos de encendido y fugas de escape antes de cambiar el catalizador.']);
+    else add('ok', 'Catalizador', 'Catalizador trabajando', 'La sonda trasera se mantiene estable alrededor de ' + fmt(median(s2), 2) + ' V mientras la delantera oscila. Eso indica que el catalizador almacena oxígeno.', ev);
+  }
+
+  // Ralentí
+  const idleWarm = rows.filter(r => r.idle && r.warm === true && fin(r.rpm));
+  if (idleWarm.length >= 20) {
+    const rp = idleWarm.map(r => r.rpm), m = median(rp), sd = std(rp);
+    const ev = ['mediana ' + fmt(m) + ' rpm', '± ' + fmt(sd) + ' rpm', fmt(idleWarm.length) + ' s analizados'];
+    if (m > 950) add('warn', 'Ralentí', 'Ralentí alto', 'En caliente se queda en ' + fmt(m) + ' rpm. Lo típico es 650 a 900 rpm (sube un poco con el aire acondicionado).', ev, ['Confirma que el aire acondicionado estaba apagado.', 'Busca entradas de aire y limpia el cuerpo de aceleración.']);
+    else if (m < 600) add('warn', 'Ralentí', 'Ralentí bajo', 'Se queda en ' + fmt(m) + ' rpm en caliente.', ev, ['Limpia el cuerpo de aceleración y el paso de aire del control de ralentí.']);
+    else if (sd > 60) add('warn', 'Ralentí', 'Ralentí inestable', 'Las RPM varían ± ' + fmt(sd) + ' rpm. Puede venir de cuerpo de aceleración sucio, control de ralentí, bujías o bobinas, o una entrada de aire.', ev, ['Limpia el cuerpo de aceleración.', 'Revisa bujías y bobinas.']);
+    else add('ok', 'Ralentí', 'Ralentí estable', 'En caliente: ' + fmt(m) + ' ± ' + fmt(sd) + ' rpm. Lo típico es 650 a 900 rpm.', ev);
+  }
+
+  // Voltaje
+  if (has('volt')) {
+    const on = vals(rows, 'volt', r => r.running && fin(r.rpm) && r.rpm > 600), off = vals(rows, 'volt', r => fin(r.rpm) && r.rpm < 100);
+    if (on.length >= 20) {
+      const m = median(on), ev = ['motor encendido ' + fmt(m, 2) + ' V'];
+      if (off.length >= 3) ev.push('motor apagado ' + fmt(median(off), 2) + ' V');
+      if (m < 12.6) add('crit', 'Carga', 'El alternador no está cargando', 'Con el motor encendido el voltaje es ' + fmt(m, 2) + ' V. La batería se está descargando.', ev, ['Revisa la correa del alternador, los bornes y el alternador.', 'Si aparece P1500, revisa el cable FR entre alternador y ECU.']);
+      else if (m < 13.2) add('warn', 'Carga', 'Carga baja', 'Con el motor encendido marca ' + fmt(m, 2) + ' V. Lo normal es 13,5 a 14,7 V. Algunos adaptadores marcan 0,2 a 0,3 V menos que la batería.', ev, ['Mide en los bornes de la batería con un multímetro.', 'Revisa correa, bornes y alternador.']);
+      else if (m > 15) add('crit', 'Carga', 'Sobrecarga', 'Con el motor encendido marca ' + fmt(m, 2) + ' V. Puede dañar la batería y los módulos.', ev, ['Revisa el regulador del alternador.']);
+      else add('ok', 'Carga', 'Sistema de carga normal', 'Con el motor encendido: ' + fmt(m, 2) + ' V.', ev);
+      if (off.length >= 3 && median(off) < 12.2) add('warn', 'Carga', 'Batería baja en reposo', 'Antes de arrancar marcaba ' + fmt(median(off), 2) + ' V. Una batería cargada da 12,4 a 12,8 V.', ev, ['Carga la batería y hazle una prueba de carga.']);
+    }
+  }
+
+  // Aire de admisión: MAF en ralentí y eficiencia volumétrica
+  const baroAll = vals(rows, 'baro');
+  const baro = baroAll.length ? median(baroAll) : 101.3;
+  if (has('maf')) {
+    const mi = vals(rows, 'maf', r => r.idle && r.warm === true);
+    if (mi.length >= 20) {
+      const m = median(mi);
+      if (m < 1.8) add('warn', 'Admisión', 'Flujo de aire bajo en ralentí', 'El sensor marca ' + fmt(m, 1) + ' g/s en ralentí caliente. Para un 2.4 lo esperable es 2 a 4,5 g/s. Un sensor sucio mide de menos y empobrece la mezcla.', [fmt(m, 1) + ' g/s'], ['Limpia el sensor de flujo de aire con limpiador para MAF.', 'Busca entradas de aire después del sensor.']);
+      else if (m > 5.5) add('info', 'Admisión', 'Flujo de aire alto en ralentí', 'Marca ' + fmt(m, 1) + ' g/s. Puede ser el aire acondicionado encendido o un motor trabajando con más carga de lo normal.', [fmt(m, 1) + ' g/s']);
+    }
+    const ve = rows.filter(r => r.wot && fin(r.maf) && fin(r.rpm) && r.rpm > 2500).map(r => {
+      const T = (fin(r.iat) ? r.iat : 30) + 273.15;
+      const rho = (fin(r.baro) ? r.baro : baro) * 1000 / (287.05 * T);
+      return r.maf / (VEH.displ * r.rpm / 120 * rho);
+    });
+    if (ve.length >= 3) {
+      const m = median(ve), ev = ['eficiencia volumétrica ' + fmt(m * 100) + ' %', fmt(ve.length) + ' s a fondo'];
+      const note = baroAll.length ? '' : ' No encontré la presión barométrica; asumí nivel del mar. En altura (Caracas está a unos 900 m) el valor real es alrededor de 10 % mayor.';
+      if (m < 0.6) add('warn', 'Admisión', 'El motor respira poco a fondo', 'A fondo el motor llena ' + fmt(m * 100) + ' % de su cilindrada. Un motor atmosférico sano llega a 75–95 %.' + note, ev, ['Revisa el filtro de aire.', 'Un catalizador tapado frena la salida de gases: revisa la contrapresión de escape.', 'Limpia el sensor de flujo de aire.']);
+      else add('ok', 'Admisión', 'Llenado a fondo normal', 'A fondo el motor llena ' + fmt(m * 100) + ' % de su cilindrada, dentro de lo esperado.' + note, ev);
+    }
+  } else if (has('map')) {
+    const mi = vals(rows, 'map', r => r.idle && r.warm === true);
+    if (mi.length >= 20 && median(mi) > 50) add('warn', 'Admisión', 'Poco vacío en ralentí', 'La presión del múltiple en ralentí es ' + fmt(median(mi)) + ' kPa; lo normal es 25 a 40 kPa.', [fmt(median(mi)) + ' kPa'], ['Busca entradas de aire.', 'Revisa la sincronización y el escape.']);
+  }
+
+  // Avance y detonación
+  if (has('timing')) {
+    let ev = 0;
+    for (let i = 2; i < rows.length; i++) {
+      const a = rows[i - 2], b = rows[i];
+      if (fin(a.timing) && fin(b.timing) && a.timing - b.timing > 8 && fin(b.load) && b.load > 50 && fin(a.tps) && fin(b.tps) && Math.abs(b.tps - a.tps) < 3 && fin(b.rpm) && Math.abs(b.rpm - a.rpm) < 250) { ev++; i += 3; }
+    }
+    if (ev >= 3) add('info', 'Encendido', 'Posible retardo por detonación', 'El avance cayó de golpe ' + ev + ' veces con carga estable. La computadora retrasa el encendido cuando detecta cascabeleo.', [ev + ' caídas'], ['Usa gasolina de 91 octanos o más.', 'Si persiste, revisa carbón en las cámaras y el sensor de detonación.']);
+  }
+
+  // Aire de admisión caliente
+  if (has('iat')) {
+    const mv = vals(rows, 'iat', r => fin(r.speed) && r.speed > 40);
+    const am = vals(rows, 'amb');
+    if (mv.length >= 30) {
+      const m = median(mv);
+      if (am.length && m - median(am) > 25) add('info', 'Admisión', 'Aire de admisión caliente', 'Rodando, el aire entra a ' + fmt(m) + ' °C, ' + fmt(m - median(am)) + ' °C más que el ambiente. El aire caliente reduce potencia.', [fmt(m) + ' °C'], ['Revisa que la toma de aire no esté tomando aire del motor.']);
+      else if (!am.length && m > 60) add('info', 'Admisión', 'Aire de admisión caliente', 'Rodando, el aire entra a ' + fmt(m) + ' °C.', [fmt(m) + ' °C'], ['Revisa la toma de aire y el sensor de temperatura del aire.']);
+    }
+  }
+
+  // Cobertura
+  const missing = ['rpm', 'speed', 'ect', 'stft', 'ltft', 'o2s1', 'o2s2', 'maf'].filter(k => !has(k));
+  if (missing.length) add('info', 'Datos', 'Señales que faltan en el registro', 'Sin ellas algunas revisiones no se pudieron hacer. Agrégalas en Car Scanner antes de grabar, o asígnalas en la pestaña Datos si están en el archivo con otro nombre.', missing.map(k => SIG[k].label));
+  if (runMin > 0 && runMin < 8) add('info', 'Datos', 'Registro corto', 'Hay ' + fmt(runMin, 1) + ' minutos con el motor encendido. Con 15 a 20 minutos desde el arranque en frío el diagnóstico es más completo.');
+
+  const order = { crit: 0, warn: 1, info: 3, ok: 2 };
+  F.sort((a, b) => order[a.sev] - order[b.sev]);
+  let score = 100;
+  for (const f of F) {
+    if (f.area === 'Código guardado') score -= 25;
+    else if (f.area === 'Código pendiente') score -= 10;
+    else if (f.sev === 'crit') score -= 25;
+    else if (f.sev === 'warn') score -= 10;
+  }
+  return { findings: F, score: Math.max(0, Math.min(100, score)), stored, pending };
+}
+
+/* ---------- Consumo ---------- */
+function fuel(state) {
+  const rows = state.rows, tpsMin = state.tpsMin;
+  const hasMaf = rows.some(r => fin(r.maf)), hasMap = rows.some(r => fin(r.map)) && rows.some(r => fin(r.iat));
+  const method = hasMaf ? 'maf' : hasMap ? 'map' : null;
+  let dist = 0, liters = 0, idleL = 0, idleS = 0, runS = 0, hiS = 0, accN = 0, brkN = 0, wotN = 0;
+  const bands = [[0, 30], [30, 60], [60, 90], [90, 110], [110, 999]].map(b => ({ lo: b[0], hi: b[1], km: 0, L: 0 }));
+  let inAcc = false, inBrk = false, inWot = false;
+  for (const r of rows) {
+    if (!r.running) continue;
+    runS++;
+    let air = NaN;
+    if (method === 'maf') air = r.maf;
+    else if (method === 'map' && fin(r.map) && fin(r.rpm)) air = 0.8 * VEH.displ * r.rpm / 120 * (r.map * 1000 / (287.05 * ((fin(r.iat) ? r.iat : 30) + 273.15)));
+    let lph = NaN;
+    if (fin(air)) {
+      const afr = r.wot ? 12.8 : 14.7;
+      lph = r.decel ? 0 : air / afr * 3600 / 745;
+      liters += lph / 3600;
+    }
+    const v = fin(r.speed) ? r.speed : 0;
+    const km = v / 3600; dist += km;
+    if (v > 2) { const b = bands.find(b => v >= b.lo && v < b.hi); if (b) { b.km += km; if (fin(lph)) b.L += lph / 3600; } }
+    if (r.idle) { idleS++; if (fin(lph)) idleL += lph / 3600; }
+    if (fin(r.rpm) && r.rpm > 3000) hiS++;
+    const acc = r.acc;
+    if (fin(acc) && acc > 2.8) { if (!inAcc) accN++; inAcc = true; } else inAcc = false;
+    if (fin(acc) && acc < -3.5) { if (!inBrk) brkN++; inBrk = true; } else inBrk = false;
+    if (r.wot) { if (!inWot) wotN++; inWot = true; } else inWot = false;
+  }
+  const idleRows = rows.filter(r => r.idle && r.warm !== false && fin(r.maf));
+  const idleLph = idleRows.length ? median(idleRows.map(r => r.maf / 14.7 * 3600 / 745)) : NaN;
+  return { method, dist, liters, l100: dist > 0.5 && liters > 0 ? liters / dist * 100 : NaN, idleL, idleS, runS, hiS, accN, brkN, wotN, bands, idleLph };
+}
+
+/* ---------- Ejemplo simulado (Outlander 4G69 con una pequeña entrada de aire) ---------- */
+function makeDemo() {
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+  const nz = a => (rnd() - 0.5) * 2 * a;
+  const keys = [[0, 0], [150, 0], [158, 25], [170, 42], [200, 45], [212, 0], [228, 0], [240, 30], [255, 48], [290, 50], [302, 0], [318, 0], [330, 35], [345, 55], [380, 58], [392, 20], [400, 0], [415, 0], [430, 40], [450, 62], [480, 68], [500, 80], [540, 90], [580, 95], [590, 60], [600, 60], [608, 100], [640, 100], [680, 110], [720, 95], [740, 70], [760, 45], [775, 30], [790, 0], [805, 0], [815, 30], [830, 40], [845, 0], [960, 0]];
+  const sp = t => { for (let i = 1; i < keys.length; i++) if (t <= keys[i][0]) { const [t0, v0] = keys[i - 1], [t1, v1] = keys[i]; return v0 + (v1 - v0) * (t - t0) / (t1 - t0); } return 0; };
+  const k = [103, 57, 36, 25.5];
+  let gear = 0, ect = 29, ltftIdle = 0, o2state = 0;
+  const lines = [];
+  const head = ['time', 'RPM del motor (rpm)', 'Velocidad del vehículo (km/h)', 'Temperatura del refrigerante del motor (°C)', 'Temperatura del aire de admisión (°C)', 'Flujo de aire MAF (g/s)', 'Posición del acelerador (%)', 'Carga calculada del motor (%)', 'Avance del encendido (°)', 'Ajuste de combustible a corto plazo - Banco 1 (%)', 'Ajuste de combustible a largo plazo - Banco 1 (%)', 'Sensor de oxígeno Banco 1 - Sensor 1 voltaje (V)', 'Sensor de oxígeno Banco 1 - Sensor 2 voltaje (V)', 'Voltaje del módulo de control (V)', 'Presión barométrica (kPa)'];
+  lines.push(head.join(','));
+  const start = Date.UTC(2026, 9, 18, 11, 20, 0);
+  let i = 0;
+  for (let t = 0; t <= 960; t += 0.5, i++) {
+    const v = sp(t), dv = sp(t + 1) - sp(t - 1);
+    const wot = t >= 600 && t < 612;
+    const crank = t < 3;
+    const up = wot ? [30, 60, 95] : [18, 35, 55];
+    while (gear < 3 && v > up[gear]) gear++;
+    while (gear > 0 && v < up[gear - 1] - 8) gear--;
+    const idleRpm = 760 + Math.max(0, (60 - ect)) * 12;
+    let rpm = crank ? 0 : Math.max(idleRpm, v * k[gear] * (dv > 0.5 && v < 30 ? 1.25 : 1.04));
+    if (wot) rpm = Math.min(5600, Math.max(rpm, v * k[gear] * 1.08));
+    rpm += crank ? 0 : nz(14);
+    const decel = !crank && dv < -0.5 && v > 15;
+    const tps = crank ? 0 : wot ? 92 : decel ? 12.5 : v < 1 ? 12.5 : 14 + Math.max(0, dv) * 9 + v * 0.06;
+    const load = crank ? 0 : wot ? 96 : decel ? 14 : v < 1 ? 23 + Math.max(0, (60 - ect)) * 0.15 : Math.min(80, 26 + Math.max(0, dv) * 14 + v * 0.18);
+    const rho = 92 * 1000 / (287.05 * 309);
+    const maf = crank ? 0 : (load / 100) * 0.92 * VEH.displ * rpm / 120 * rho + nz(0.15);
+    if (!crank) ect += (ect < 87 ? (0.022 + rpm / 120000) : (87.5 - ect) * 0.05) * 0.5 * 3.8;
+    const iat = 33 + (v < 5 ? Math.min(8, t / 60) : 0) + nz(0.4);
+    const timing = crank ? 0 : wot ? 19 + nz(1) : decel ? 22 : v < 1 ? 9 + nz(1.2) : 28 + v * 0.05 + nz(1.5);
+    const leak = 14 * Math.exp(-(maf - 3) / 3.5);
+    const target = Math.max(1.5, Math.min(14, leak)) + 1.5;
+    ltftIdle += (target - ltftIdle) * 0.02;
+    const closed = ect > 45 && !decel && !wot && !crank;
+    if (closed && rnd() < 0.42) o2state = 1 - o2state;
+    const o2s1 = crank ? 0.05 : !closed ? (decel ? 0.04 : wot ? 0.86 : 0.12 + nz(0.03)) : (o2state ? 0.72 + nz(0.1) : 0.16 + nz(0.07));
+    const stft = closed ? (o2state ? -3 : 4) + nz(2.5) + (target - ltftIdle) * 0.6 : 0;
+    const o2s2 = crank ? 0.05 : Math.min(0.68, 0.08 + t * 0.0016) + nz(0.025) - (decel ? 0.3 : 0);
+    const volt = crank ? 12.52 + nz(0.02) : 14.1 + (ect < 50 ? 0.25 : 0) + nz(0.04);
+    const ts = new Date(start + t * 1000).toISOString().replace('T', ' ').replace('Z', '');
+    const row = [ts, fmtN(rpm, 0), fmtN(v, 0), i % 4 === 0 ? fmtN(ect, 0) : '', i % 4 === 1 ? fmtN(iat, 0) : '', fmtN(maf, 2), fmtN(tps, 1), fmtN(load, 1), i % 2 === 0 ? fmtN(timing, 1) : '', fmtN(stft, 1), i % 4 === 2 ? fmtN(ltftIdle * (closed ? 1 : 0), 1) : '', fmtN(Math.max(0, o2s1), 3), i % 2 === 1 ? fmtN(Math.max(0, o2s2), 3) : '', i % 6 === 0 ? fmtN(volt, 2) : '', i % 20 === 0 ? '92' : ''];
+    lines.push(row.join(','));
+  }
+  return lines.join('\n');
+}
+function fmtN(v, d) { return Number(v).toFixed(d); }
+
+/* ---------- Estado ---------- */
+const S = { name: '', example: false, csv: '', cols: [], mapping: {}, rows: [], codes: [], tpsMin: NaN, noTime: false };
+const STORE = 'diag-outlander-v1';
+function save() {
+  try {
+    const keep = { codes: S.codes };
+    if (!S.example && S.csv.length < 2_500_000) { keep.csv = S.csv; keep.name = S.name; keep.mapping = S.mapping; }
+    localStorage.setItem(STORE, JSON.stringify(keep));
+  } catch (e) { /* almacenamiento no disponible */ }
+}
+function load() { try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { return null; } }
+
+function ingest(text, name, example, mapping, codes) {
+  const { cols, noTime, meta } = csvToColumns(text);
+  S.csv = text; S.name = name; S.example = example; S.cols = cols; S.noTime = noTime;
+  S.mapping = mapping && Object.keys(mapping).length ? mapping : autoMap(cols);
+  if (meta.dtc_guardados !== undefined || meta.dtc_pendientes !== undefined) {
+    const pick = (s, kind) => (s || '').split(/\s+/).filter(c => DTC_RE.test(c)).map(code => ({ code, kind }));
+    const mc = [...pick(meta.dtc_guardados, 'stored'), ...pick(meta.dtc_pendientes, 'pending')];
+    const extra = (codes || []).filter(c => !mc.some(m => m.code === c.code));
+    S.codes = [...mc, ...extra];
+  } else if (codes) S.codes = codes;
+  if (meta.simulado === 'si') S.example = true;
+  recompute();
+}
+function recompute() {
+  const sig = buildSignals(S.cols, S.mapping);
+  S.rows = buildTimeline(sig);
+  S.tpsMin = classify(S.rows).tpsMin;
+  render();
+  save();
+}
+
+/* ---------- Render ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ICON = {
+  crit: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.4v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  warn: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 4.6v4.2M8 11v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  ok: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m5 8.2 2 2 4-4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  info: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 7.2v4M8 4.8v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+};
+const SEV_LABEL = { crit: 'Urgente', warn: 'Revisar', ok: 'Bien', info: 'Nota' };
+
+let A = null, FU = null;
+function render() {
+  A = analyze(S); FU = fuel(S);
+  renderSource(); renderSummary(); renderFindings(); renderCharts(); renderStats(); renderMapping(); renderCodes(); renderFuel();
+}
+
+function renderSource() {
+  $('src-name').textContent = S.name;
+  const chip = $('src-chip');
+  chip.textContent = S.example ? 'Datos de ejemplo, no son de tu carro' : 'Tu registro';
+  chip.className = 'chip' + (S.example ? ' example' : '');
+  const run = S.rows.filter(r => r.running).length;
+  $('src-meta').textContent = mmss(S.rows.length) + ' de registro · ' + mmss(run) + ' con motor encendido' + (S.noTime ? ' · sin columna de tiempo: asumí 1 fila por segundo' : '');
+}
+
+function gaugeSVG(score) {
+  const a0 = Math.PI * 0.85, a1 = Math.PI * 2.15, r = 80, cx = 100, cy = 100;
+  const pt = a => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  const arc = (from, to) => { const [x0, y0] = pt(from), [x1, y1] = pt(to); return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 ${to - from > Math.PI ? 1 : 0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+  const av = a0 + (a1 - a0) * score / 100;
+  const col = score >= 85 ? 'var(--good)' : score >= 55 ? 'var(--warn)' : 'var(--crit)';
+  let ticks = '';
+  for (let s = 0; s <= 100; s += 10) { const a = a0 + (a1 - a0) * s / 100; const [x0, y0] = [cx + 66 * Math.cos(a), cy + 66 * Math.sin(a)]; const [x1, y1] = [cx + (s % 50 ? 70 : 73) * Math.cos(a), cy + (s % 50 ? 70 : 73) * Math.sin(a)]; ticks += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="var(--muted)" stroke-width="${s % 50 ? 1 : 1.6}"/>`; }
+  return `<svg viewBox="0 0 200 172" role="img" aria-label="Índice de salud ${score} de 100">
+    <path d="${arc(a0, a1)}" fill="none" stroke="var(--sunken)" stroke-width="12" stroke-linecap="round"/>
+    ${score > 0 ? `<path d="${arc(a0, Math.max(a0 + 0.02, av))}" fill="none" stroke="${col}" stroke-width="12" stroke-linecap="round"/>` : ''}
+    ${ticks}
+    <text x="100" y="106" text-anchor="middle" fill="var(--ink)" style="font-family:var(--f-display);font-size:52px;font-weight:700">${score}</text>
+    <text x="100" y="128" text-anchor="middle" fill="var(--muted)" style="font-family:var(--f-body);font-size:11px;letter-spacing:.08em">ÍNDICE DE SALUD</text>
+  </svg>`;
+}
+function renderSummary() {
+  const s = A.score;
+  const counts = { crit: 0, warn: 0, ok: 0 };
+  A.findings.forEach(f => { if (counts[f.sev] !== undefined) counts[f.sev]++; });
+  const verdict = s >= 85 ? 'En buen estado' : s >= 55 ? 'Necesita revisión' : 'Atención pronto';
+  $('gauge').innerHTML = gaugeSVG(s) + `<div class="verdict">${verdict}</div><div class="note">100 menos lo que restan códigos y hallazgos</div>
+    <div class="counts"><div><div class="n" style="color:var(--crit-ink)">${counts.crit}</div><div class="l">Urgente</div></div><div><div class="n" style="color:var(--warn-ink)">${counts.warn}</div><div class="l">Revisar</div></div><div><div class="n" style="color:var(--good-ink)">${counts.ok}</div><div class="l">Bien</div></div></div>`;
+  const rows = S.rows, run = rows.filter(r => r.running);
+  const facts = [
+    ['Duración', mmss(run.length), 'min:s con el motor encendido'],
+    ['Distancia', fmt(FU.dist, 1), 'km recorridos'],
+    ['Temp. máxima', fmt(Math.max(...vals(rows, 'ect'), -Infinity) > -Infinity ? Math.max(...vals(rows, 'ect')) : NaN), '°C del refrigerante'],
+    ['Consumo', fin(FU.l100) ? fmt(FU.l100, 1) : '—', 'L/100 km estimado'],
+    ['Velocidad máx.', fmt(Math.max(0, ...vals(rows, 'speed'))), 'km/h'],
+    ['RPM máx.', fmt(Math.max(0, ...vals(rows, 'rpm'))), 'rpm'],
+  ];
+  $('facts').innerHTML = facts.map(([l, v, d]) => `<div class="fact"><div class="label">${l}</div><div class="v num">${v}</div><div class="d">${d}</div></div>`).join('');
+  $('trip-note').textContent = S.example ? 'Simulación de un 4G69 con una entrada de aire pequeña' : '';
+}
+function renderFindings() {
+  $('findings').innerHTML = A.findings.map(f => `<article class="finding">
+    <span class="sev ${f.sev}">${ICON[f.sev]}${SEV_LABEL[f.sev]}</span>
+    <div><div class="area">${esc(f.area)}</div><h3>${esc(f.title)}</h3><p>${esc(f.body)}</p>
+    ${f.evidence.length ? `<div class="evidence">${f.evidence.map(e => `<span>${esc(e)}</span>`).join('')}</div>` : ''}
+    ${f.todo.length ? `<ul class="todo">${f.todo.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}</div></article>`).join('') || '<p class="notice">Sin hallazgos.</p>';
+}
+
+/* Gráficas de línea en SVG con cursor */
+const CHARTS = [
+  { title: 'RPM del motor', series: [['rpm', 'RPM']], unit: 'rpm', dec: 0, y0: 0 },
+  { title: 'Velocidad', series: [['speed', 'Velocidad']], unit: 'km/h', dec: 0, y0: 0 },
+  { title: 'Temperatura del refrigerante', series: [['ect', 'Refrigerante']], unit: '°C', dec: 0, band: [80, 95], bandLabel: 'rango normal 80–95 °C' },
+  { title: 'Ajustes de combustible', series: [['stft', 'Corto plazo'], ['ltft', 'Largo plazo']], unit: '%', dec: 1, band: [-10, 10], bandLabel: 'normal ±10 %', sym: true },
+  { title: 'Sondas de oxígeno', series: [['o2s1', 'Antes del catalizador'], ['o2s2', 'Después del catalizador']], unit: 'V', dec: 2, y0: 0, y1: 1 },
+  { title: 'Flujo de aire', series: [['maf', 'MAF']], unit: 'g/s', dec: 1, y0: 0 },
+  { title: 'Acelerador y carga', series: [['tps', 'Acelerador'], ['load', 'Carga']], unit: '%', dec: 0, y0: 0, y1: 100 },
+  { title: 'Voltaje', series: [['volt', 'Voltaje']], unit: 'V', dec: 2, band: [13.5, 14.7], bandLabel: 'carga normal 13,5–14,7 V' },
+];
+function niceTicks(lo, hi, n = 4) {
+  const span = hi - lo || 1, step0 = span / n, mag = 10 ** Math.floor(Math.log10(step0));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= step0) || mag * 10;
+  const t = []; for (let v = Math.ceil(lo / step) * step; v <= hi + step * 1e-6; v += step) t.push(+v.toFixed(6));
+  return t;
+}
+function renderCharts() {
+  const host = $('charts');
+  host.innerHTML = '';
+  for (const c of CHARTS) {
+    const present = c.series.filter(([k]) => S.rows.some(r => fin(r[k])));
+    const card = document.createElement('div');
+    card.className = 'card chart-card';
+    card.innerHTML = `<h3>${c.title}</h3><div class="meta">${c.unit}${c.bandLabel ? ' · franja: ' + c.bandLabel : ''}</div>` +
+      (present.length > 1 ? `<div class="legend">${present.map(([k, n], i) => `<span><i style="background:var(--s${i + 1})"></i>${n}</span>`).join('')}</div>` : '') +
+      `<div class="plot"></div>`;
+    host.appendChild(card);
+    const plot = card.querySelector('.plot');
+    if (!present.length) { plot.innerHTML = '<p class="empty-chart">Esta señal no está en el registro.</p>'; continue; }
+    drawLine(plot, c, present);
+  }
+}
+function drawLine(el, c, present) {
+  const rows = S.rows;
+  const W = Math.max(260, el.clientWidth || 520), H = 170, m = { l: 40, r: 10, t: 8, b: 22 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const tMax = rows.length ? rows[rows.length - 1].t : 1;
+  let lo = Infinity, hi = -Infinity;
+  present.forEach(([k]) => rows.forEach(r => { if (fin(r[k])) { lo = Math.min(lo, r[k]); hi = Math.max(hi, r[k]); } }));
+  if (c.band) { lo = Math.min(lo, c.band[0]); hi = Math.max(hi, c.band[1]); }
+  if (c.y0 !== undefined) lo = Math.min(lo, c.y0);
+  if (c.y1 !== undefined) hi = Math.max(hi, c.y1);
+  if (c.sym) { const a = Math.max(Math.abs(lo), Math.abs(hi)); lo = -a; hi = a; }
+  const pad = (hi - lo) * 0.06 || 1; if (c.y0 === undefined) lo -= pad; hi += pad;
+  const yt = niceTicks(lo, hi, 4); lo = Math.min(lo, yt[0]); hi = Math.max(hi, yt[yt.length - 1]);
+  const X = t => m.l + t / tMax * iw, Y = v => m.t + ih - (v - lo) / (hi - lo) * ih;
+  const step = Math.max(1, Math.floor(rows.length / Math.max(200, iw)));
+  let svg = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${c.title}">`;
+  if (c.band) svg += `<rect x="${m.l}" y="${Y(c.band[1]).toFixed(1)}" width="${iw}" height="${(Y(c.band[0]) - Y(c.band[1])).toFixed(1)}" fill="var(--good)" opacity=".09"/>`;
+  yt.forEach(v => { svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="${v === 0 ? 'var(--axis)' : 'var(--grid)'}" stroke-width="1"/><text x="${m.l - 6}" y="${(Y(v) + 3).toFixed(1)}" text-anchor="end">${fmt(v, Math.abs(hi - lo) < 3 ? 1 : 0)}</text>`; });
+  const xt = niceTicks(0, tMax / 60, 5).filter(v => v * 60 <= tMax);
+  xt.forEach(v => { svg += `<text x="${X(v * 60).toFixed(1)}" y="${H - 6}" text-anchor="middle">${v} min</text>`; });
+  svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${m.t + ih}" y2="${m.t + ih}" stroke="var(--axis)"/>`;
+  present.forEach(([k], si) => {
+    let d = '', pen = false;
+    for (let i = 0; i < rows.length; i += step) {
+      let v = rows[i][k];
+      if (step > 1) { // conserva extremos del tramo
+        let mn = Infinity, mx = -Infinity; for (let j = i; j < Math.min(rows.length, i + step); j++) { const x = rows[j][k]; if (fin(x)) { mn = Math.min(mn, x); mx = Math.max(mx, x); } }
+        v = fin(mn) ? ((i / step) % 2 ? mx : mn) : NaN;
+      }
+      if (!fin(v)) { pen = false; continue; }
+      d += (pen ? 'L' : 'M') + X(rows[i].t).toFixed(1) + ' ' + Y(v).toFixed(1); pen = true;
+    }
+    svg += `<path d="${d}" fill="none" stroke="var(--s${si + 1})" stroke-width="${present.length > 1 ? 1.6 : 2}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  });
+  svg += `<line class="xh" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="var(--ink-2)" stroke-width="1" opacity="0"/>`;
+  present.forEach((_, si) => { svg += `<circle class="dot" data-i="${si}" r="4" fill="var(--s${si + 1})" stroke="var(--surface)" stroke-width="2" opacity="0"/>`; });
+  svg += `<rect x="${m.l}" y="0" width="${iw}" height="${H}" fill="transparent" class="hit"/></svg>`;
+  el.innerHTML = svg + '<div class="tip" hidden></div>';
+  const s = el.querySelector('svg'), tip = el.querySelector('.tip'), xh = s.querySelector('.xh'), dots = [...s.querySelectorAll('.dot')];
+  const move = ev => {
+    const rect = s.getBoundingClientRect();
+    const px = (ev.clientX - rect.left) * W / rect.width;
+    const t = Math.max(0, Math.min(tMax, (px - m.l) / iw * tMax));
+    const r = rows[Math.min(rows.length - 1, Math.round(t))];
+    if (!r) return;
+    const x = X(r.t);
+    xh.setAttribute('x1', x); xh.setAttribute('x2', x); xh.setAttribute('opacity', '.5');
+    let html = `<div class="t">${mmss(r.t)}</div>`;
+    present.forEach(([k, n], si) => {
+      const v = r[k];
+      if (fin(v)) { dots[si].setAttribute('cx', x); dots[si].setAttribute('cy', Y(v)); dots[si].setAttribute('opacity', '1'); } else dots[si].setAttribute('opacity', '0');
+      html += `<div class="row"><i style="background:var(--s${si + 1})"></i>${n}: <b class="num">${fmt(v, c.dec)}</b> ${c.unit}</div>`;
+    });
+    tip.innerHTML = html; tip.hidden = false;
+    const left = x / W * rect.width;
+    tip.style.top = '4px';
+    tip.style.left = Math.min(rect.width - tip.offsetWidth - 4, Math.max(4, left + 12)) + 'px';
+    if (left + 12 + tip.offsetWidth > rect.width) tip.style.left = Math.max(4, left - tip.offsetWidth - 12) + 'px';
+  };
+  const leave = () => { tip.hidden = true; xh.setAttribute('opacity', '0'); dots.forEach(d => d.setAttribute('opacity', '0')); };
+  s.addEventListener('pointermove', move); s.addEventListener('pointerdown', move); s.addEventListener('pointerleave', leave);
+}
+function renderStats() {
+  const rows = S.rows;
+  const keys = SIG_KEYS.filter(k => rows.some(r => fin(r[k])));
+  $('stats-table').innerHTML = `<thead><tr><th>Señal</th><th class="num">Mín.</th><th class="num">Mediana</th><th class="num">Máx.</th><th>Unidad</th></tr></thead><tbody>` +
+    keys.map(k => { const a = vals(rows, k, r => r.running || k === 'volt'); const d = SIG[k].dec; return `<tr><td>${SIG[k].label}</td><td class="num">${fmt(quant(a, 0), d)}</td><td class="num">${fmt(median(a), d)}</td><td class="num">${fmt(quant(a, 1), d)}</td><td>${SIG[k].unit}</td></tr>`; }).join('') + '</tbody>';
+}
+function renderMapping() {
+  const opts = i => `<option value="-1">— sin asignar —</option>` + S.cols.map((c, j) => `<option value="${j}"${j === i ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
+  $('map-table').innerHTML = `<thead><tr><th>Señal</th><th>Columna del archivo</th></tr></thead><tbody>` +
+    SIG_KEYS.map(k => `<tr><td>${SIG[k].label}</td><td><select id="map-${k}" data-k="${k}">${opts(S.mapping[k] ?? -1)}</select></td></tr>`).join('') + '</tbody>';
+  $('map-table').querySelectorAll('select').forEach(sel => sel.addEventListener('change', () => {
+    const v = +sel.value; if (v < 0) delete S.mapping[sel.dataset.k]; else S.mapping[sel.dataset.k] = v;
+    recompute();
+  }));
+}
+function dtcRow(c, removable) {
+  const d = describe(c.code);
+  return `<div class="dtc"><div><div class="code">${esc(c.code)}</div>${c.kind ? `<div class="kind">${c.kind === 'stored' ? 'Guardado' : 'Pendiente'}</div>` : ''}</div>
+    <div class="body"><p><strong>${esc(d.title)}</strong></p>${d.causes ? `<p>${esc(d.causes)}</p>` : ''}${relatedHint(c.code)}</div>
+    ${removable ? `<button class="x" type="button" data-del="${esc(c.code)}" aria-label="Quitar ${esc(c.code)}">×</button>` : '<span></span>'}</div>`;
+}
+function relatedHint(code) {
+  const f = A && A.findings.find(f => f.area === 'Mezcla');
+  if (/^P017[0-2]$/.test(code) && f) return `<p style="margin-top:4px"><strong>Según tu registro:</strong> ${esc(f.title.toLowerCase())}.</p>`;
+  const cat = A && A.findings.find(f => f.area === 'Catalizador');
+  if (code === 'P0420' && cat) return `<p style="margin-top:4px"><strong>Según tu registro:</strong> ${esc(cat.title.toLowerCase())}.</p>`;
+  const th = A && A.findings.find(f => f.area === 'Enfriamiento');
+  if (/^P012[58]$/.test(code) && th) return `<p style="margin-top:4px"><strong>Según tu registro:</strong> ${esc(th.title.toLowerCase())}.</p>`;
+  return '';
+}
+function renderCodes() {
+  const list = $('dtc-list');
+  list.innerHTML = S.codes.length ? S.codes.map(c => dtcRow(c, true)).join('') : '<p class="notice" style="padding:10px 0">No hay códigos cargados. Si Car Scanner no muestra ninguno, déjalo así: es buena señal.</p>';
+  list.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => { S.codes = S.codes.filter(c => c.code !== b.dataset.del); render(); save(); }));
+}
+function renderFuel() {
+  const f = FU;
+  const note = f.method === 'maf' ? 'Calculado con el flujo de aire (MAF) y una mezcla de 14,7:1' : f.method === 'map' ? 'Calculado con la presión del múltiple; es una aproximación' : 'Tu registro no trae flujo de aire ni presión del múltiple, así que no se puede estimar el consumo';
+  $('fuel-note').textContent = note;
+  const kml = fin(f.l100) ? 100 / f.l100 : NaN;
+  $('fuel-facts').innerHTML = [
+    ['Consumo', fin(f.l100) ? fmt(f.l100, 1) : '—', 'L/100 km'],
+    ['Rendimiento', fin(kml) ? fmt(kml, 1) : '—', 'km por litro'],
+    ['Gasolina usada', f.method ? fmt(f.liters, 2) : '—', 'litros en el recorrido'],
+    ['Ralentí', fin(f.idleLph) ? fmt(f.idleLph, 2) : '—', 'litros por hora detenido'],
+  ].map(([l, v, d]) => `<div class="fact"><div class="label">${l}</div><div class="v num">${v}</div><div class="d">${d}</div></div>`).join('');
+  const bands = f.bands.filter(b => b.km >= 0.3 && b.L > 0).map(b => ({ ...b, l100: b.L / b.km * 100 }));
+  const max = Math.max(...bands.map(b => b.l100), 1), best = bands.length ? Math.min(...bands.map(b => b.l100)) : NaN;
+  $('band-bars').innerHTML = bands.length ? bands.map(b => `<div class="bar-row" title="${fmt(b.km, 1)} km en este rango"><span class="lab">${b.hi > 200 ? 'más de ' + b.lo : b.lo + '–' + b.hi} km/h</span><span class="track"><span class="fill" style="width:${(b.l100 / max * 100).toFixed(1)}%"></span></span><span class="val">${fmt(b.l100, 1)} L/100${b.l100 === best ? ' ★' : ''}</span></div>`).join('') + `<p class="notice">★ rango más eficiente del recorrido</p>` : '<p class="notice">Hace falta un recorrido de al menos unos kilómetros con flujo de aire para comparar rangos.</p>';
+  const pct = (a, b) => b ? fmt(a / b * 100) + ' %' : '—';
+  $('drive-facts').innerHTML = [
+    ['En ralentí', pct(f.idleS, f.runS), 'del tiempo encendido'],
+    ['Sobre 3.000 rpm', pct(f.hiS, f.runS), 'del tiempo encendido'],
+    ['A fondo', fmt(f.wotN), 'aceleraciones'],
+    ['Arranques bruscos', fmt(f.accN), 'más de 2,8 m/s²'],
+    ['Frenadas bruscas', fmt(f.brkN), 'más de 3,5 m/s²'],
+  ].map(([l, v, d]) => `<div class="fact"><div class="label">${l}</div><div class="v num">${v}</div><div class="d">${d}</div></div>`).join('');
+  const tips = [];
+  const idlePct = f.runS ? f.idleS / f.runS : 0;
+  if (idlePct > 0.25 && fin(f.idleLph)) tips.push(`<b>Apaga el motor en esperas largas.</b> Pasaste ${fmt(idlePct * 100)} % del tiempo detenido con el motor encendido. Tu Outlander gasta unos ${fmt(f.idleLph, 2)} L por hora en ralentí.`);
+  if (bands.length >= 2) {
+    const b = bands.find(x => x.l100 === best);
+    const hiB = bands.filter(x => x.lo >= 90).sort((x, y) => y.l100 - x.l100)[0];
+    if (hiB && hiB.l100 > best * 1.12) tips.push(`<b>La velocidad cuesta gasolina.</b> Entre ${hiB.hi > 200 ? 'más de ' + hiB.lo : hiB.lo + ' y ' + hiB.hi} km/h gastaste ${fmt((hiB.l100 / best - 1) * 100)} % más que en tu mejor rango (${b.lo}–${b.hi > 200 ? '+' : b.hi} km/h).`);
+  }
+  if (f.accN + f.wotN >= 3) tips.push(`<b>Acelera más suave.</b> Hubo ${f.accN + f.wotN} arranques fuertes o a fondo. La caja automática de 4 marchas cambia antes y el motor queda en menos RPM si pisas el acelerador de forma progresiva.`);
+  if (f.hiS / Math.max(1, f.runS) > 0.1) tips.push(`<b>Menos tiempo arriba de 3.000 rpm.</b> El ${fmt(f.hiS / f.runS * 100)} % del recorrido el motor estuvo alto de vueltas.`);
+  for (const x of A.findings) {
+    if (x.area === 'Mezcla' && x.sev !== 'ok' && x.sev !== 'info') tips.push(`<b>Corrige la mezcla.</b> ${esc(x.title)}: mientras la computadora compense, el consumo y la potencia se resienten.`);
+    if (x.area === 'Enfriamiento' && /termostato|no llega|baja al rodar/i.test(x.title + x.body) && x.sev === 'warn') tips.push('<b>Cambia el termostato.</b> Un motor frío trabaja con mezcla más rica y gasta más.');
+    if (x.area === 'Sonda O2' && x.sev === 'warn') tips.push('<b>Revisa la sonda delantera.</b> Una sonda lenta o desviada hace que la computadora controle peor la mezcla.');
+  }
+  tips.push('<b>Mantenimiento que rinde en el 4G69:</b> filtro de aire limpio, bujías al intervalo del manual, presión correcta de los cauchos y el ATF de la caja cambiado según el manual.');
+  $('tips').innerHTML = tips.map(t => `<li>${t}</li>`).join('');
+}
+
+/* ---------- Pestañas ---------- */
+const TABS = ['resumen', 'datos', 'codigos', 'consumo', 'conectar'];
+function showTab(name, push) {
+  if (!TABS.includes(name)) name = 'resumen';
+  TABS.forEach(t => { $('panel-' + t).hidden = t !== name; $('tab-' + t).setAttribute('aria-selected', t === name ? 'true' : 'false'); });
+  if (name === 'datos') renderCharts();
+  if (push) { try { history.replaceState(null, '', '#' + name); } catch (e) { /* sin acceso al historial */ } }
+}
+document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab, true)));
+
+/* ---------- Eventos ---------- */
+$('file-in').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  const err = $('src-error'); err.hidden = true;
+  try {
+    const text = await file.text();
+    ingest(text, file.name, false, null, S.example ? [] : S.codes);
+    showTab('resumen', true);
+  } catch (ex) { err.textContent = 'No pude leer el archivo: ' + ex.message; err.hidden = false; }
+  e.target.value = '';
+});
+$('btn-demo').addEventListener('click', () => { $('src-error').hidden = true; ingest(makeDemo(), 'Recorrido de ejemplo (simulado)', true, null, [{ code: 'P0171', kind: 'pending' }]); });
+
+let kind = 'stored';
+const setKind = k => { kind = k; $('kind-stored').setAttribute('aria-pressed', k === 'stored'); $('kind-pending').setAttribute('aria-pressed', k === 'pending'); };
+$('kind-stored').addEventListener('click', () => setKind('stored'));
+$('kind-pending').addEventListener('click', () => setKind('pending'));
+$('code-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const raw = $('code-in').value.toUpperCase().split(/[\s,;]+/).filter(Boolean);
+  const bad = raw.filter(c => !DTC_RE.test(c));
+  const good = raw.filter(c => DTC_RE.test(c));
+  good.forEach(code => { S.codes = S.codes.filter(c => c.code !== code); S.codes.push({ code, kind }); });
+  $('code-error').hidden = !bad.length;
+  $('code-error').textContent = bad.length ? 'Revisa estos códigos: ' + bad.join(', ') + '. El formato es una letra (P, B, C o U) y cuatro caracteres, por ejemplo P0171.' : '';
+  $('code-in').value = bad.join(' ');
+  if (good.length) { render(); save(); }
+});
+$('lookup-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const c = $('lookup-in').value.trim().toUpperCase();
+  $('lookup-out').innerHTML = DTC_RE.test(c) ? dtcRow({ code: c }, false) : '<p class="error">Escribe un código como P0300.</p>';
+});
+
+let rt;
+window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (!$('panel-datos').hidden) renderCharts(); }, 150); });
+
+/* ---------- Inicio ---------- */
+const saved = load();
+let handoff = null;
+try { handoff = JSON.parse(localStorage.getItem('obd-analizar') || 'null'); localStorage.removeItem('obd-analizar'); } catch (e) { handoff = null; }
+try {
+  if (handoff && handoff.csv) ingest(handoff.csv, handoff.name || 'Grabación del teléfono', false, null, []);
+  else if (saved && saved.csv) ingest(saved.csv, saved.name || 'Registro guardado', false, saved.mapping, saved.codes || []);
+  else ingest(makeDemo(), 'Recorrido de ejemplo (simulado)', true, null, [{ code: 'P0171', kind: 'pending' }]);
+} catch (e) {
+  ingest(makeDemo(), 'Recorrido de ejemplo (simulado)', true, null, [{ code: 'P0171', kind: 'pending' }]);
+}
+const h = (location.hash || '').replace('#', '');
+showTab(TABS.includes(h) ? h : 'resumen', false);
+})();
+</script>
+</body></html>
