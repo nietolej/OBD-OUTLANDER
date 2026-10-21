@@ -380,6 +380,8 @@ const VEH = { displ: 2.378 };
 const SIG = {
   rpm:    { label: 'RPM del motor', unit: 'rpm', dec: 0 },
   speed:  { label: 'Velocidad', unit: 'km/h', dec: 0 },
+  gps:    { label: 'Velocidad GPS', unit: 'km/h', dec: 1 },
+  gpsacc: { label: 'Precisión del GPS', unit: 'm', dec: 0 },
   ect:    { label: 'Temperatura del refrigerante', unit: '°C', dec: 0 },
   iat:    { label: 'Temperatura del aire de admisión', unit: '°C', dec: 0 },
   maf:    { label: 'Flujo de aire (MAF)', unit: 'g/s', dec: 1 },
@@ -422,6 +424,8 @@ function matchSignal(h) {
   if (/(calculated.*load|carga calculada|engine load|carga del motor)/.test(n) && !/absolut/.test(n)) return 'load';
   if (/(throttle|acelerador|mariposa)/.test(n) && !/(command|comandad|relativ|pedal|actuator|actuador| b\b| c\b)/.test(n)) return 'tps';
   if (/(\brpm\b|revoluciones|engine speed|velocidad del motor|regimen del motor)/.test(n)) return 'rpm';
+  if (/gps/.test(n) && /(precision|accuracy)/.test(n)) return 'gpsacc';
+  if (/gps/.test(n) && /(speed|velocidad)/.test(n)) return 'gps';
   if (/(vehicle speed|velocidad del vehiculo|speed \(obd\)|^speed|^velocidad)/.test(n) && !/gps/.test(n)) return 'speed';
   if (/(voltage|voltaje|tension|bateria|battery)/.test(n)) return 'volt';
   return null;
@@ -430,7 +434,7 @@ function matchSignal(h) {
 function converter(key, h) {
   const n = norm(h);
   if (['ect', 'iat', 'amb'].includes(key) && /(°f|℉|\(f\)|fahrenheit)/i.test(h + n)) return v => (v - 32) * 5 / 9;
-  if (key === 'speed' && /mph/.test(n)) return v => v * 1.60934;
+  if ((key === 'speed' || key === 'gps') && /mph/.test(n)) return v => v * 1.60934;
   if (key === 'maf' && /lb\/min/.test(n)) return v => v * 7.5599;
   if ((key === 'map' || key === 'baro') && /psi/.test(n)) return v => v * 6.89476;
   if ((key === 'map' || key === 'baro') && /inhg/.test(n)) return v => v * 3.38639;
@@ -562,14 +566,28 @@ function buildSignals(cols, mapping) {
     const conv = converter(k, cols[i].name);
     sig[k] = cols[i].pts.map(([t, v]) => [t, conv(v)]);
   }
+  if (sig.speed) { const d = despike(sig.speed); sig.speed = d.pts; sig.spikes = d.removed; }
   return sig;
+}
+/* Quita lecturas de velocidad imposibles: un valor aislado que salta
+   lejos de sus dos vecinos cuando esos vecinos coinciden entre sí. */
+function despike(pts) {
+  const out = [], removed = [];
+  for (let i = 0; i < pts.length; i++) {
+    const [t, v] = pts[i], a = pts[i - 1], b = pts[i + 1];
+    const bad = !fin(v) || v < 0 || v > 230 || (a && b && Math.abs(a[1] - b[1]) <= 15 + 8 * (b[0] - a[0]) &&
+      Math.abs(v - a[1]) > 25 && Math.abs(v - b[1]) > 25);
+    if (bad) removed.push([t, v]); else out.push(pts[i]);
+  }
+  return { pts: out, removed };
 }
 function buildTimeline(sig, dt = 1, stale = 6) {
   let tMax = 0;
-  for (const k in sig) { const p = sig[k]; if (p.length) tMax = Math.max(tMax, p[p.length - 1][0]); }
+  for (const k in sig) { const p = sig[k]; if (k !== 'spikes' && p.length) tMax = Math.max(tMax, p[p.length - 1][0]); }
   const N = Math.floor(tMax / dt) + 1;
   const rows = Array.from({ length: N }, (_, i) => ({ t: i * dt }));
   for (const k in sig) {
+    if (k === 'spikes') continue;
     const p = sig[k]; let j = 0;
     for (const r of rows) {
       while (j + 1 < p.length && p[j + 1][0] <= r.t) j++;
@@ -905,6 +923,35 @@ function analyze(state) {
     }
   }
 
+  // Velocidad: OBD contra GPS del teléfono
+  if (state.spikes && state.spikes.length) {
+    const sp = state.spikes;
+    add('info', 'Velocidad', sp.length === 1 ? 'Se descartó una lectura de velocidad imposible' : 'Se descartaron ' + sp.length + ' lecturas de velocidad imposibles',
+      'El adaptador entregó ' + (sp.length === 1 ? 'un valor que saltó' : 'valores que saltaron') + ' lejos de las lecturas de antes y después. Son errores de comunicación de la línea K, no del carro. No se usan en máximos, distancia ni consumo.',
+      sp.slice(0, 4).map(([t, v]) => fmt(v) + ' km/h en ' + mmss(t)));
+  }
+  if (has('gps') && has('speed')) {
+    const okAcc = r => !fin(r.gpsacc) || r.gpsacc <= 20;
+    const pairs = [];
+    for (let i = 1; i < rows.length - 1; i++) {
+      const r = rows[i], a = rows[i - 1], b = rows[i + 1];
+      if (!fin(r.speed) || !fin(r.gps) || r.gps < 20 || r.speed < 20 || !okAcc(r)) continue;
+      if (!fin(a.speed) || !fin(b.speed) || Math.abs(b.speed - a.speed) > 4) continue; // solo tramos estables
+      pairs.push(r.speed / r.gps);
+    }
+    if (pairs.length >= 20) {
+      const k = median(pairs), pct = (k - 1) * 100, spread = (quant(pairs, 0.75) - quant(pairs, 0.25)) * 100;
+      const ev = ['OBD/GPS ' + fmt(k, 3), pairs.length + ' s comparados', 'dispersión ±' + fmt(spread / 2, 1) + ' %'];
+      const at60 = 'A 60 km/h reales el OBD marca ' + fmt(60 * k) + ' km/h.';
+      const dash = 'Para comparar el tablero, anota lo que marca el velocímetro a una velocidad estable y compáralo con la velocidad GPS del grabador; lo normal es que el tablero marque de 2 a 8 % más que el GPS.';
+      if (Math.abs(pct) <= 3) add('ok', 'Velocidad', 'La velocidad del OBD coincide con el GPS', 'La diferencia es de ' + sgn(pct, 1) + ' %, dentro del error normal. ' + at60, ev, [dash]);
+      else add(Math.abs(pct) > 8 ? 'warn' : 'info', 'Velocidad', 'El OBD marca ' + fmt(Math.abs(pct), 1) + ' % ' + (pct > 0 ? 'más' : 'menos') + ' que el GPS',
+        at60 + (pct > 0 ? ' Si los cauchos son más pequeños que los originales, el sensor de velocidad cuenta más vueltas y marca de más.' : ' Si los cauchos son más grandes que los originales, el sensor de velocidad marca de menos.')
+        + ' El odómetro, el consumo y los cambios de la caja automática usan esta misma señal.', ev,
+        ['Verifica la medida de los cauchos contra la etiqueta de la puerta del conductor.', 'Revisa que la presión de los cauchos sea la indicada.', dash]);
+    } else add('info', 'Velocidad', 'Pocos datos para comparar con el GPS', 'Hacen falta al menos 20 segundos a velocidad estable por encima de 20 km/h con buena señal de GPS. Hubo ' + pairs.length + '.', [], ['Graba un tramo de avenida a velocidad constante con el teléfono cerca del parabrisas.']);
+  }
+
   // Patrón: varios sensores fallando a la vez (posible referencia de 5 V)
   const pat = refPattern(state.codes);
   if (pat) {
@@ -1029,7 +1076,7 @@ function makeDemo() {
 function fmtN(v, d) { return Number(v).toFixed(d); }
 
 /* ---------- Estado ---------- */
-const S = { name: '', example: false, csv: '', cols: [], mapping: {}, rows: [], codes: [], tpsMin: NaN, noTime: false };
+const S = { name: '', example: false, csv: '', cols: [], mapping: {}, rows: [], codes: [], tpsMin: NaN, noTime: false, spikes: [] };
 const STORE = 'diag-outlander-v1';
 function save() {
   try {
@@ -1056,6 +1103,7 @@ function ingest(text, name, example, mapping, codes) {
 function recompute() {
   const sig = buildSignals(S.cols, S.mapping);
   S.rows = buildTimeline(sig);
+  S.spikes = sig.spikes || [];
   S.tpsMin = classify(S.rows).tpsMin;
   render();
   save();
@@ -1133,7 +1181,7 @@ function renderFindings() {
 /* Gráficas de línea en SVG con cursor */
 const CHARTS = [
   { title: 'RPM del motor', series: [['rpm', 'RPM']], unit: 'rpm', dec: 0, y0: 0 },
-  { title: 'Velocidad', series: [['speed', 'Velocidad']], unit: 'km/h', dec: 0, y0: 0 },
+  { title: 'Velocidad', series: [['speed', 'OBD'], ['gps', 'GPS']], unit: 'km/h', dec: 0, y0: 0 },
   { title: 'Temperatura del refrigerante', series: [['ect', 'Refrigerante']], unit: '°C', dec: 0, band: [80, 95], bandLabel: 'rango normal 80–95 °C' },
   { title: 'Ajustes de combustible', series: [['stft', 'Corto plazo'], ['ltft', 'Largo plazo']], unit: '%', dec: 1, band: [-10, 10], bandLabel: 'normal ±10 %', sym: true },
   { title: 'Sondas de oxígeno', series: [['o2s1', 'Antes del catalizador'], ['o2s2', 'Después del catalizador']], unit: 'V', dec: 2, y0: 0, y1: 1 },

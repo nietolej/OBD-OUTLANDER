@@ -240,6 +240,8 @@ const SLOW = ['15', '05', '04', '0E', '07', '0F', '0B', '33', '46', '42'];
 const COLS = [
   ['rpm', 'RPM del motor (rpm)', 0, 'RPM', 'rpm'],
   ['speed', 'Velocidad del vehículo (km/h)', 0, 'Velocidad', 'km/h'],
+  ['gps', 'Velocidad GPS (km/h)', 1, 'Velocidad GPS', 'km/h'],
+  ['gpsacc', 'Precisión GPS (m)', 0, 'Precisión GPS', 'm'],
   ['ect', 'Temperatura del refrigerante del motor (°C)', 0, 'Refrigerante', '°C'],
   ['stft', 'Ajuste de combustible a corto plazo - Banco 1 (%)', 1, 'Ajuste corto', '%'],
   ['ltft', 'Ajuste de combustible a largo plazo - Banco 1 (%)', 1, 'Ajuste largo', '%'],
@@ -465,6 +467,7 @@ async function connect(useSim) {
     setStatus(useSim ? 'sim' : 'on', useSim ? 'Simulador' : 'Conectado');
     $('con-meta').innerHTML = (useSim ? '<b>Modo prueba:</b> datos inventados de un 4G69, no son de tu carro. ' : '') +
       'Protocolo <b>' + esc(proto) + '</b> · ' + esc(version || 'ELM327') + ' · ' + active.size + ' señales disponibles' + (vin ? ' · VIN ' + esc(vin) : '');
+    if (!useSim) startGPS();
     renderTiles();
     poll();
   } catch (e) {
@@ -499,6 +502,7 @@ function parseVIN(raw) {
 async function disconnect(silent) {
   polling = false;
   if (recording) stopRec();
+  stopGPS();
   const l = link; link = null; elm = null;
   try { await l?.close(); } catch (e) { /* cerrado */ }
   setStatus('', 'Desconectado');
@@ -510,6 +514,30 @@ function lost(msg) {
   log('✕ ' + msg);
   const wasRec = !!recording;
   disconnect(true).then(() => showErr(msg + (wasRec ? ' La grabación se guardó hasta ese momento.' : '') + ' Vuelve a conectar para seguir.'));
+}
+
+/* ---------- GPS del teléfono (para comparar la velocidad del OBD) ---------- */
+let gpsWatch = null, gpsState = '';
+function startGPS() {
+  if (gpsWatch !== null) return;
+  if (!('geolocation' in navigator)) { gpsState = 'Sin GPS'; return; }
+  gpsState = 'Buscando…';
+  gpsWatch = navigator.geolocation.watchPosition(p => {
+    gpsState = '';
+    const v = p.coords.speed; // m/s; null cuando el teléfono no la calcula
+    if (v !== null && Number.isFinite(v)) latest.gps = { v: v * 3.6, t: Date.now(), acc: p.coords.accuracy };
+  }, e => {
+    if (e.code === 1) { gpsState = 'Sin permiso'; log('GPS: no diste permiso de ubicación. La grabación sigue, pero sin velocidad GPS.'); stopGPS(); }
+    else gpsState = 'Sin señal';
+  }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+}
+function stopGPS() {
+  if (gpsWatch !== null) { try { navigator.geolocation.clearWatch(gpsWatch); } catch (e) { /* ya detenido */ } }
+  gpsWatch = null; delete latest.gps;
+}
+function addGPS(row) {
+  const g = latest.gps;
+  if (g && Date.now() - g.t < 2500) { row.gps = g.v; row.gpsacc = g.acc; }
 }
 
 /* ---------- Lectura en vivo ---------- */
@@ -550,7 +578,7 @@ async function poll() {
       const m = raw && raw.match(/(\d{1,2}[.,]\d)\s*V/i);
       if (m) { const v = parseFloat(m[1].replace(',', '.')); row.volt = v; latest.volt = { v, t: Date.now() }; }
     }
-    if (recording && Object.keys(row).length > 1) recording.rows.push(row);
+    if (recording && Object.keys(row).length > 1) { addGPS(row); recording.rows.push(row); }
     renderTiles();
   }
 }
@@ -558,8 +586,14 @@ setInterval(() => { rate = rateCount; rateCount = 0; renderRec(); }, 1000);
 
 function renderTiles() {
   const now = Date.now();
-  const shown = COLS.filter(([k]) => ['rpm', 'speed', 'ect', 'stft', 'ltft', 'o2s1', 'o2s2', 'maf', 'tps', 'load', 'timing', 'iat', 'volt'].includes(k));
+  const shown = COLS.filter(([k]) => ['rpm', 'speed', 'gps', 'ect', 'stft', 'ltft', 'o2s1', 'o2s2', 'maf', 'tps', 'load', 'timing', 'iat', 'volt'].includes(k));
   $('tiles').innerHTML = shown.map(([k, , , label, unit]) => {
+    if (k === 'gps') {
+      if (!link || sim) return '';
+      const G = latest.gps;
+      if (!G) return `<div class="tile na"><div class="v">${esc(gpsState || 'Esperando señal')}</div><div class="l">${label}</div></div>`;
+      return `<div class="tile${now - G.t > 4000 ? ' stale' : ''}"><div class="v">${fmt(G.v, 0)}<span class="u">${unit}</span></div><div class="l">${label}${G.acc > 20 ? ' · señal débil' : ''}</div></div>`;
+    }
     const pid = Object.keys(PIDS).find(p => PIDS[p].k === k);
     const avail = link && (active.has(pid) || (k === 'volt'));
     const L = latest[k];
