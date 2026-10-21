@@ -282,6 +282,11 @@ footer { color: var(--muted); font-size: .8rem; }
         <h3>Valores por señal</h3>
         <div class="table-wrap" style="margin-top:8px"><table id="stats-table"></table></div>
       </div>
+      <div class="card" id="extra-card" hidden>
+        <h3>Otros parámetros de la ECU</h3>
+        <p class="notice" id="extra-note" style="margin-top:4px"></p>
+        <div class="table-wrap" style="margin-top:8px"><table id="extra-table"></table></div>
+      </div>
       <div class="card">
         <details id="map-details">
           <summary>Columnas del archivo</summary>
@@ -304,6 +309,7 @@ footer { color: var(--muted); font-size: .8rem; }
           <button class="btn primary" type="submit">Agregar</button>
         </form>
         <p class="error" id="code-error" hidden style="margin-top:8px"></p>
+        <div class="facts" id="ecu-facts" style="margin-top:12px" hidden></div>
         <div id="dtc-list" style="margin-top:10px"></div>
       </div>
       <div class="card">
@@ -815,11 +821,15 @@ function analyze(state) {
 
   // Códigos
   const stored = state.codes.filter(c => c.kind === 'stored'), pending = state.codes.filter(c => c.kind === 'pending');
+  const meta = state.meta || {}, milOff = meta.luz_check === 'apagada';
+  const since = [fin(+meta.calentamientos_desde_borrado) && meta.calentamientos_desde_borrado !== '' ? meta.calentamientos_desde_borrado + ' calentamientos desde el último borrado' : null,
+    meta.km_desde_borrado ? meta.km_desde_borrado + ' km desde el último borrado' : null].filter(Boolean);
   for (const c of state.codes) {
-    const d = describe(c.code);
-    add(c.kind === 'stored' ? 'crit' : 'warn', c.kind === 'stored' ? 'Código guardado' : 'Código pendiente', c.code + ' · ' + d.title,
-      c.kind === 'stored' ? 'La computadora confirmó la falla y enciende la luz de check engine.' : 'La computadora vio la falla una vez y la confirmará si se repite en el próximo ciclo.',
-      [], d.causes ? [d.causes] : []);
+    const d = describe(c.code), hist = c.kind === 'stored' && milOff;
+    add(c.kind === 'stored' ? (hist ? 'warn' : 'crit') : 'warn', c.kind === 'stored' ? (hist ? 'Código en historial' : 'Código guardado') : 'Código pendiente', c.code + ' · ' + d.title,
+      hist ? 'Está guardado, pero la luz de check engine estaba apagada al grabar: la falla no se repitió en los últimos ciclos de manejo. Probablemente es de un evento pasado.'
+        : c.kind === 'stored' ? 'La computadora confirmó la falla y enciende la luz de check engine.' : 'La computadora vio la falla una vez y la confirmará si se repite en el próximo ciclo.',
+      hist ? since : [], d.causes ? [d.causes] : []);
   }
 
   // Temperatura del motor
@@ -997,7 +1007,11 @@ function analyze(state) {
       + ' Con esta falla la ECU suele entrar en modo de emergencia y poner los electroventiladores a full todo el tiempo.'
       + (coldFan ? ' Eso también explicaría que el motor no llegue a su temperatura: no cambies el termostato hasta resolver esto.' : '')
       + (over ? ' Además hay sobrecarga del alternador; corrígela, porque el exceso de voltaje daña sensores y relés.' : '');
-    add(pat.ref.length ? 'crit' : 'warn', 'Patrón de códigos', pat.ref.length ? 'Falla común en la referencia de 5 V' : 'Varios sensores fallando a la vez', body, ev, [
+    if (milOff) add('info', 'Patrón de códigos', pat.ref.length ? 'Falla pasada en la referencia de 5 V' : 'Varios sensores fallaron a la vez en el pasado',
+      'Los códigos apuntan a una causa común' + (pat.ref.length ? ' (la línea de 5 V que comparten esos sensores)' : '') + ', pero la luz de check engine estaba apagada al grabar: la falla no está activa. Suele ser un evento puntual: batería desconectada o descargada, arranque con cables, un pico de voltaje o un conector que se movió.'
+        + (over ? ' Corrige la sobrecarga del alternador para que no se repita.' : ''), ev,
+      ['Borra los códigos y maneja normal 2 o 3 días.', 'Si vuelven juntos, haz la prueba de los 5 V con el multímetro.']);
+    else add(pat.ref.length ? 'crit' : 'warn', 'Patrón de códigos', pat.ref.length ? 'Falla común en la referencia de 5 V' : 'Varios sensores fallando a la vez', body, ev, [
       'Borra los códigos y arranca. Si vuelven juntos, la falla es actual; si no, eran históricos.',
       'Con la llave en ON, mide entre el cable de referencia del sensor de la mariposa y tierra: deben ser unos 5,0 V.',
       'Si marca bajo, desconecta uno por uno el sensor de presión del A/C, la MAF, el sensor de la mariposa y los de cigüeñal y levas. El que al soltarlo devuelva los 5 V es el que tiene el corto.',
@@ -1016,6 +1030,7 @@ function analyze(state) {
   for (const f of F) {
     if (f.area === 'Patrón de códigos') continue; // explica códigos ya descontados
     if (f.area === 'Código guardado') score -= 25;
+    else if (f.area === 'Código en historial') score -= 5;
     else if (f.area === 'Código pendiente') score -= 10;
     else if (f.sev === 'crit') score -= 25;
     else if (f.sev === 'warn') score -= 10;
@@ -1109,7 +1124,7 @@ function makeDemo() {
 function fmtN(v, d) { return Number(v).toFixed(d); }
 
 /* ---------- Estado ---------- */
-const S = { name: '', example: false, csv: '', cols: [], mapping: {}, rows: [], codes: [], tpsMin: NaN, noTime: false, spikes: [] };
+const S = { name: '', example: false, csv: '', cols: [], mapping: {}, rows: [], codes: [], tpsMin: NaN, noTime: false, spikes: [], meta: {} };
 const STORE = 'diag-outlander-v1';
 function save() {
   try {
@@ -1122,7 +1137,7 @@ function load() { try { return JSON.parse(localStorage.getItem(STORE) || 'null')
 
 function ingest(text, name, example, mapping, codes) {
   const { cols, noTime, meta } = csvToColumns(text);
-  S.csv = text; S.name = name; S.example = example; S.cols = cols; S.noTime = noTime;
+  S.csv = text; S.name = name; S.example = example; S.cols = cols; S.noTime = noTime; S.meta = meta;
   S.mapping = mapping && Object.keys(mapping).length ? mapping : autoMap(cols);
   if (meta.dtc_guardados !== undefined || meta.dtc_pendientes !== undefined) {
     const pick = (s, kind) => (s || '').split(/\s+/).filter(c => DTC_RE.test(c)).map(code => ({ code, kind }));
@@ -1156,7 +1171,7 @@ const SEV_LABEL = { crit: 'Urgente', warn: 'Revisar', ok: 'Bien', info: 'Nota' }
 let A = null, FU = null;
 function render() {
   A = analyze(S); FU = fuel(S);
-  renderSource(); renderSummary(); renderFindings(); renderCharts(); renderStats(); renderMapping(); renderCodes(); renderFuel(); renderFills();
+  renderSource(); renderSummary(); renderFindings(); renderCharts(); renderStats(); renderMapping(); renderCodes(); renderFuel(); renderFills(); renderExtra(); renderEcuFacts();
 }
 
 function renderSource() {
@@ -1311,6 +1326,37 @@ function renderStats() {
   const keys = SIG_KEYS.filter(k => rows.some(r => fin(r[k])));
   $('stats-table').innerHTML = `<thead><tr><th>Señal</th><th class="num">Mín.</th><th class="num">Mediana</th><th class="num">Máx.</th><th>Unidad</th></tr></thead><tbody>` +
     keys.map(k => { const a = vals(rows, k, r => r.running || k === 'volt'); const d = SIG[k].dec; return `<tr><td>${SIG[k].label}</td><td class="num">${fmt(quant(a, 0), d)}</td><td class="num">${fmt(median(a), d)}</td><td class="num">${fmt(quant(a, 1), d)}</td><td>${SIG[k].unit}</td></tr>`; }).join('') + '</tbody>';
+}
+const FUELSYS = { 1: 'Lazo abierto (motor frío)', 2: 'Lazo cerrado', 4: 'Lazo abierto (carga o desaceleración)', 8: 'Lazo abierto por falla', 16: 'Lazo cerrado con falla de sonda' };
+function renderExtra() {
+  const used = new Set(Object.values(S.mapping).filter(i => i >= 0));
+  const timeLike = n => /^(time|tiempo|fecha|hora)/i.test(norm(n));
+  const extra = S.cols.map((c, i) => ({ c, i })).filter(({ c, i }) => !used.has(i) && !timeLike(c.name) && !/precision gps/.test(norm(c.name)));
+  $('extra-card').hidden = !extra.length;
+  if (!extra.length) return;
+  $('extra-note').textContent = 'Columnas del archivo que no usa ningún diagnóstico automático. Sirven para revisar a mano o para futuras revisiones.';
+  $('extra-table').innerHTML = `<thead><tr><th>Parámetro</th><th class="num">Mín.</th><th class="num">Mediana</th><th class="num">Máx.</th><th class="num">Lecturas</th></tr></thead><tbody>` +
+    extra.map(({ c }) => {
+      const a = c.pts.map(p => p[1]);
+      if (/sistema de combustible \(codigo\)/.test(norm(c.name))) {
+        const cnt = {}; a.forEach(v => { cnt[v] = (cnt[v] || 0) + 1; });
+        const txt = Object.entries(cnt).sort((x, y) => y[1] - x[1]).map(([v, n]) => (FUELSYS[v] || 'código ' + v) + ': ' + fmt(n / a.length * 100) + ' %').join(' · ');
+        return `<tr><td>Estado del sistema de combustible</td><td colspan="3">${esc(txt)}</td><td class="num">${a.length}</td></tr>`;
+      }
+      const dec = Math.max(...a.map(Math.abs)) < 10 ? 2 : 1;
+      return `<tr><td>${esc(c.name)}</td><td class="num">${fmt(quant(a, 0), dec)}</td><td class="num">${fmt(median(a), dec)}</td><td class="num">${fmt(quant(a, 1), dec)}</td><td class="num">${a.length}</td></tr>`;
+    }).join('') + '</tbody>';
+}
+function renderEcuFacts() {
+  const m = S.meta || {};
+  const f = [];
+  if (m.luz_check) f.push(['Luz de check engine', m.luz_check === 'encendida' ? 'Encendida' : 'Apagada', 'al leer los códigos con el grabador']);
+  if (m.calentamientos_desde_borrado) f.push(['Calentamientos', m.calentamientos_desde_borrado, 'desde el último borrado de códigos']);
+  if (m.km_desde_borrado) f.push(['Km desde el borrado', fmt(+m.km_desde_borrado), 'km recorridos desde el último borrado']);
+  if (m.min_desde_borrado) f.push(['Tiempo desde el borrado', fmt(+m.min_desde_borrado / 60, 1), 'horas de motor encendido']);
+  if (m.km_con_luz) f.push(['Km con la luz encendida', fmt(+m.km_con_luz), 'km manejados con check engine']);
+  $('ecu-facts').hidden = !f.length;
+  $('ecu-facts').innerHTML = f.map(([l, v, d]) => `<div class="fact"><div class="label">${l}</div><div class="v num">${esc(v)}</div><div class="d">${d}</div></div>`).join('');
 }
 function renderMapping() {
   const opts = i => `<option value="-1">— sin asignar —</option>` + S.cols.map((c, j) => `<option value="${j}"${j === i ? ' selected' : ''}>${esc(c.name)}</option>`).join('');

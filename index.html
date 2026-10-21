@@ -103,6 +103,13 @@ select { color: var(--ink); background: var(--surface); border: 1px solid var(--
 .mons .todo::before { color: var(--warn); }
 .ff { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px 14px; font-size: .86rem; }
 .confirm { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; background: var(--sunken); border-radius: 8px; padding: 10px 12px; }
+/* Todos los parámetros */
+.ptable { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.ptable td { padding: 7px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+.ptable tr:first-child td { border-top: 0; }
+.ptable .pid { font-family: var(--f-mono); color: var(--muted); width: 2.6em; }
+.ptable .val { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ptable .how { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 /* Grabaciones */
 .recs { display: grid; }
 .rec { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); }
@@ -164,6 +171,12 @@ ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--
       </div>
       <div class="tiles" id="tiles"></div>
       <p class="note">Deja la pantalla encendida y Chrome abierto mientras grabas. Si el teléfono se bloquea, Android corta el Bluetooth.</p>
+    </section>
+
+    <section class="card" aria-labelledby="h-all">
+      <div class="row between"><h2 id="h-all">Todos los parámetros de la ECU</h2><button class="btn small" id="btn-scan" type="button" disabled>Leer de nuevo</button></div>
+      <p class="note" id="all-meta">Al conectar, la app pregunta a la computadora del carro qué parámetros reporta y los lee todos.</p>
+      <div style="overflow-x:auto"><table class="ptable" id="all-table"></table></div>
     </section>
 
     <section class="card" aria-labelledby="h-dtc">
@@ -233,6 +246,47 @@ const PIDS = {
   '42': { k: 'volt', n: 2, f: b => (b[0] * 256 + b[1]) / 1000 },
   '46': { k: 'amb', n: 1, f: b => b[0] - 40 },
 };
+/* Resto de los PIDs estándar del modo 01. once: se lee al conectar y al leer códigos (contadores);
+   sin once: se agrega a la grabación y se lee uno por ciclo para no frenar los principales. */
+const FUELSYS = { 1: 'Lazo abierto (motor frío)', 2: 'Lazo cerrado', 4: 'Lazo abierto (carga o desaceleración)', 8: 'Lazo abierto por falla', 16: 'Lazo cerrado con falla de sonda' };
+const u16 = b => b[0] * 256 + b[1];
+const XPIDS = {
+  '03': { name: 'Estado del sistema de combustible', col: 'Estado del sistema de combustible (código)', unit: '', dec: 0, n: 1, f: b => b[0], txt: v => FUELSYS[v] || 'Código ' + v },
+  '0A': { name: 'Presión de combustible', unit: 'kPa', dec: 0, n: 1, f: b => b[0] * 3 },
+  '12': { name: 'Aire secundario (estado)', unit: '', dec: 0, n: 1, f: b => b[0], once: true },
+  '13': { name: 'Sondas O2 instaladas', unit: '', dec: 0, n: 1, f: b => b[0], once: true, key: 'sondas_o2', txt: v => ['B1S1', 'B1S2', 'B1S3', 'B1S4', 'B2S1', 'B2S2', 'B2S3', 'B2S4'].filter((_, i) => v & (1 << i)).join(' ') || 'ninguna' },
+  '16': { name: 'Sonda O2 B1S3', col: 'Sensor de oxígeno Banco 1 - Sensor 3 voltaje (V)', unit: 'V', dec: 3, n: 1, f: b => b[0] / 200 },
+  '17': { name: 'Sonda O2 B1S4', col: 'Sensor de oxígeno Banco 1 - Sensor 4 voltaje (V)', unit: 'V', dec: 3, n: 1, f: b => b[0] / 200 },
+  '18': { name: 'Sonda O2 B2S1', col: 'Sensor de oxígeno Banco 2 - Sensor 1 voltaje (V)', unit: 'V', dec: 3, n: 1, f: b => b[0] / 200 },
+  '19': { name: 'Sonda O2 B2S2', col: 'Sensor de oxígeno Banco 2 - Sensor 2 voltaje (V)', unit: 'V', dec: 3, n: 1, f: b => b[0] / 200 },
+  '1C': { name: 'Norma OBD del carro', key: 'norma_obd', unit: '', dec: 0, n: 1, f: b => b[0], once: true, txt: v => ({ 1: 'OBD-II (CARB)', 2: 'OBD (EPA)', 3: 'OBD y OBD-II', 4: 'OBD-I', 5: 'Sin OBD', 6: 'EOBD (Europa)', 7: 'EOBD y OBD-II', 9: 'EOBD, OBD y OBD-II', 11: 'JOBD (Japón)', 13: 'JOBD y EOBD' })[v] || 'Tipo ' + v },
+  '1F': { name: 'Tiempo desde el arranque', key: 's_desde_arranque', unit: 's', dec: 0, n: 2, f: u16, once: true },
+  '21': { name: 'Km recorridos con la luz de check engine encendida', key: 'km_con_luz', unit: 'km', dec: 0, n: 2, f: u16, once: true },
+  '2C': { name: 'EGR comandada', unit: '%', dec: 1, n: 1, f: b => b[0] * 100 / 255 },
+  '2D': { name: 'Error de la EGR', unit: '%', dec: 1, n: 1, f: b => (b[0] - 128) * 100 / 128 },
+  '2E': { name: 'Purga EVAP comandada', col: 'Purga EVAP comandada (%)', unit: '%', dec: 1, n: 1, f: b => b[0] * 100 / 255 },
+  '2F': { name: 'Nivel de gasolina', col: 'Nivel de combustible (%)', unit: '%', dec: 1, n: 1, f: b => b[0] * 100 / 255 },
+  '30': { name: 'Calentamientos desde el último borrado de códigos', key: 'calentamientos_desde_borrado', unit: '', dec: 0, n: 1, f: b => b[0], once: true },
+  '31': { name: 'Km desde el último borrado de códigos', key: 'km_desde_borrado', unit: 'km', dec: 0, n: 2, f: u16, once: true },
+  '32': { name: 'Presión de vapor EVAP', unit: 'Pa', dec: 0, n: 2, f: b => { const x = u16(b); return (x > 32767 ? x - 65536 : x) / 4; } },
+  '3C': { name: 'Temperatura del catalizador B1S1', unit: '°C', dec: 0, n: 2, f: b => u16(b) / 10 - 40 },
+  '3E': { name: 'Temperatura del catalizador B1S2', unit: '°C', dec: 0, n: 2, f: b => u16(b) / 10 - 40 },
+  '43': { name: 'Carga absoluta', unit: '%', dec: 1, n: 2, f: b => u16(b) * 100 / 255 },
+  '44': { name: 'Relación aire/combustible comandada (lambda)', unit: 'λ', dec: 3, n: 2, f: b => u16(b) / 32768 },
+  '45': { name: 'Posición relativa del acelerador', unit: '%', dec: 1, n: 1, f: b => b[0] * 100 / 255 },
+  '47': { name: 'Mariposa, sensor B', unit: '%', dec: 1, n: 1, f: b => b[0] * 100 / 255 },
+  '48': { name: 'Mariposa, sensor C', unit: '%', dec: 1, n: 1, f: b => b[0] * 100 / 255 },
+  '49': { name: 'Pedal del acelerador, sensor D', unit: '%', dec: 1, n: 1, f: b => b[0] * 100 / 255 },
+  '4A': { name: 'Pedal del acelerador, sensor E', unit: '%', dec: 1, n: 1, f: b => b[0] * 100 / 255 },
+  '4C': { name: 'Mariposa comandada', unit: '%', dec: 1, n: 1, f: b => b[0] * 100 / 255 },
+  '4D': { name: 'Minutos con la luz de check engine encendida', key: 'min_con_luz', unit: 'min', dec: 0, n: 2, f: u16, once: true },
+  '4E': { name: 'Minutos desde el último borrado de códigos', key: 'min_desde_borrado', unit: 'min', dec: 0, n: 2, f: u16, once: true },
+  '51': { name: 'Tipo de combustible', unit: '', dec: 0, n: 1, f: b => b[0], once: true },
+  '5C': { name: 'Temperatura del aceite', col: 'Temperatura del aceite del motor (°C)', unit: '°C', dec: 0, n: 1, f: b => b[0] - 40 },
+  '5E': { name: 'Consumo de combustible (ECU)', col: 'Consumo de combustible (L/h)', unit: 'L/h', dec: 2, n: 2, f: b => u16(b) / 20 },
+};
+for (const [p, d] of Object.entries(XPIDS)) { d.k = 'x' + p; d.col = d.col || d.name + (d.unit ? ' (' + d.unit + ')' : ''); }
+const SKIP = new Set(['00', '20', '40', '60', '80', 'A0', 'C0', '01', '02', '41']); // máscaras y estados que se leen aparte
 const FAST = ['0C', '0D', '10', '11', '14', '06'];
 const SLOW = ['15', '05', '04', '0E', '07', '0F', '0B', '33', '46', '42'];
 
@@ -257,6 +311,7 @@ const COLS = [
   ['baro', 'Presión barométrica (kPa)', 0, 'Barométrica', 'kPa'],
   ['amb', 'Temperatura ambiente (°C)', 0, 'Ambiente', '°C'],
 ];
+for (const d of Object.values(XPIDS)) if (!d.once) COLS.push([d.k, d.col, d.dec, d.name, d.unit]);
 const TILE_DEC = { o2s1: 2, o2s2: 2, volt: 1, maf: 1, stft: 1, ltft: 1, timing: 0, tps: 0, load: 0 };
 const PROTOS = { '1': 'SAE J1850 PWM', '2': 'SAE J1850 VPW', '3': 'ISO 9141-2', '4': 'ISO 14230-4 KWP (5 baudios)', '5': 'ISO 14230-4 KWP (rápido)', '6': 'CAN 11 bit 500k', '7': 'CAN 29 bit 500k', '8': 'CAN 11 bit 250k', '9': 'CAN 29 bit 250k' };
 
@@ -314,7 +369,7 @@ class SimLink {
     if (c === 'ATDPN') return 'A3';
     if (c === 'ATRV') { const s = this.state(); return s.volt.toFixed(1) + 'V'; }
     if (c.startsWith('AT')) return 'OK';
-    const sup = ['01', '03', '04', '05', '06', '07', '0C', '0D', '0E', '0F', '10', '11', '13', '14', '15', '1C', '20', '33'];
+    const sup = ['01', '03', '04', '05', '06', '07', '0C', '0D', '0E', '0F', '10', '11', '13', '14', '15', '1C', '1E', '1F', '20', '21', '2E', '30', '31', '33'];
     const mask = base => { let bits = 0n; for (let i = 1; i <= 32; i++) { const p = (base + i).toString(16).padStart(2, '0').toUpperCase(); if (sup.includes(p)) bits |= 1n << BigInt(32 - i); } return bits.toString(16).padStart(8, '0').toUpperCase(); };
     const h2 = n => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0').toUpperCase();
     if (c === '0100') { const first = !this.searched; this.searched = true; return (first ? 'SEARCHING...\rBUS INIT: ...OK\r' : '') + this.sp('4100' + mask(0)); }
@@ -334,7 +389,7 @@ class SimLink {
         '0C': two(s.rpm * 4), '0D': h2(s.speed), '05': h2(s.ect + 40), '0F': h2(s.iat + 40), '10': two(s.maf * 100),
         '11': h2(s.tps * 2.55), '04': h2(s.load * 2.55), '0E': h2((s.timing + 64) * 2), '06': h2(s.stft * 1.28 + 128),
         '07': h2(s.ltft * 1.28 + 128), '14': h2(s.o2s1 * 200) + h2(s.stft * 1.28 + 128), '15': h2(s.o2s2 * 200) + 'FF',
-        '33': h2(92), '13': '03', '1C': '06'
+        '33': h2(92), '13': '03', '1C': '06', '03': (s.ect > 45 ? '02' : '01') + '00', '1E': '00', '1F': two((performance.now() - this.t0) / 1000), '21': two(0), '2E': h2(s.ect > 60 ? 40 : 0), '30': h2(12), '31': two(184)
       }[p];
       return enc ? this.sp('41' + p + enc) : 'NO DATA';
     }
@@ -418,7 +473,7 @@ function setStatus(kind, text) {
   const on = kind === 'on' || kind === 'sim';
   $('btn-connect').hidden = on || kind === 'busy'; $('btn-sim').hidden = on || kind === 'busy';
   $('btn-disc').hidden = !(on || kind === 'busy');
-  $('btn-rec').disabled = !on; $('btn-read').disabled = !on; $('btn-clear').disabled = !on;
+  $('btn-rec').disabled = !on; $('btn-read').disabled = !on; $('btn-scan').disabled = !on || scanning; $('btn-clear').disabled = !on;
   $('proto').disabled = on || kind === 'busy';
   if (!on && !recording) $('rec-meta').textContent = 'Conéctate para empezar';
 }
@@ -469,6 +524,7 @@ async function connect(useSim) {
       'Protocolo <b>' + esc(proto) + '</b> · ' + esc(version || 'ELM327') + ' · ' + active.size + ' señales disponibles' + (vin ? ' · VIN ' + esc(vin) : '');
     if (!useSim) startGPS();
     renderTiles();
+    await scanAll();
     poll();
   } catch (e) {
     const msg = String(e.message || e);
@@ -516,6 +572,55 @@ function lost(msg) {
   disconnect(true).then(() => showErr(msg + (wasRec ? ' La grabación se guardó hasta ese momento.' : '') + ' Vuelve a conectar para seguir.'));
 }
 
+/* ---------- Todos los parámetros de la ECU ---------- */
+let ecu = { vals: {}, raw: {}, t: 0 }, xrot = [], scanning = false;
+async function readRaw(pid) {
+  const raw = await elm.cmd('01' + pid, 2500, true);
+  if (raw === null || errOf(raw)) return null;
+  const l = hexLines(raw).find(x => x.startsWith('41' + pid));
+  return l ? l.slice(4) : null;
+}
+async function scanAll(onlyOnce) {
+  if (!elm || scanning) return;
+  scanning = true; $('btn-scan').disabled = true;
+  const me = link;
+  const list = [...supported].filter(p => !SKIP.has(p) && !PIDS[p] && (!onlyOnce || (XPIDS[p] && XPIDS[p].once))).sort();
+  if (!onlyOnce) { ecu = { vals: {}, raw: {}, t: 0 }; xrot = []; }
+  $('all-meta').textContent = 'Leyendo ' + list.length + ' parámetros adicionales…';
+  for (const p of list) {
+    if (link !== me) break;
+    const hex = await readRaw(p);
+    const d = XPIDS[p];
+    if (hex === null) continue;
+    if (d) { const b = bytesOf(hex); if (b.length >= d.n) { ecu.vals[p] = { v: d.f(b), t: Date.now() }; if (!d.once) { active.add(p); if (!xrot.includes(p)) xrot.push(p); } } }
+    else ecu.raw[p] = hex;
+  }
+  ecu.t = Date.now(); scanning = false; $('btn-scan').disabled = !link;
+  if (link === me) log('Parámetros adicionales: ' + (Object.keys(ecu.vals).length + Object.keys(ecu.raw).length) + ' (' + xrot.length + ' se graban)');
+  renderAll();
+}
+function renderAll() {
+  if (!link && !ecu.t) return;
+  const sup = [...supported].filter(p => !SKIP.has(p)).sort();
+  const v = (pid, d, x) => d.txt ? esc(d.txt(x)) : fmt(x, d.dec) + (d.unit ? ' ' + d.unit : '');
+  const rows = sup.map(p => {
+    if (PIDS[p]) { const k = PIDS[p].k, c = COLS.find(x => x[0] === k), L = latest[k]; return [p, c[3], L ? fmt(L.v, TILE_DEC[k] ?? 0) + ' ' + c[4] : '—', 'se graba']; }
+    const d = XPIDS[p], e = ecu.vals[p];
+    if (d) return [p, d.name, e ? v(p, d, e.v) : 'sin respuesta', d.once ? 'al conectar' : 'se graba'];
+    return [p, 'Parámetro sin decodificar', ecu.raw[p] ? 'crudo ' + ecu.raw[p] : 'sin respuesta', 'crudo'];
+  });
+  const nRec = rows.filter(r => r[3] === 'se graba').length;
+  $('all-meta').textContent = sup.length ? 'La computadora reporta ' + sup.length + ' parámetros por OBD genérico. ' + nRec + ' se graban en cada recorrido; los de lectura al conectar y los crudos se guardan en la cabecera del archivo.' : 'Sin datos.';
+  $('all-table').innerHTML = rows.map(([p, n, val, how]) => `<tr><td class="pid">${p}</td><td>${esc(n)}<div class="how">${how}</div></td><td class="val">${val}</td></tr>`).join('');
+}
+function ecuMeta() {
+  const out = ['pids_soportados=' + [...supported].filter(p => !SKIP.has(p)).sort().join(' ')];
+  for (const [p, e] of Object.entries(ecu.vals)) { const d = XPIDS[p]; if (d.once) out.push((d.key || 'pid_' + p) + '=' + (+e.v.toFixed(d.dec))); }
+  const raw = Object.entries(ecu.raw).map(([p, h]) => p + ':' + h).join(' ');
+  if (raw) out.push('pids_crudos=' + raw);
+  return out;
+}
+
 /* ---------- GPS del teléfono (para comparar la velocidad del OBD) ---------- */
 let gpsWatch = null, gpsState = '';
 function startGPS() {
@@ -548,18 +653,20 @@ async function readPid(pid) {
   const l = hexLines(raw).find(x => x.startsWith('41' + pid));
   if (!l) return { err: 'formato' };
   const b = bytesOf(l.slice(4));
-  if (b.length < PIDS[pid].n) return { err: 'corto' };
+  if (b.length < (PIDS[pid] || XPIDS[pid] || { n: 1 }).n) return { err: 'corto' };
   return { bytes: b };
 }
 async function poll() {
   polling = true;
-  let slowIdx = 0, fails = 0, lastRV = 0;
+  let slowIdx = 0, xIdx = 0, fails = 0, lastRV = 0;
   const miss = {};
   const me = link;
   while (polling && link === me) {
     const fast = FAST.filter(p => active.has(p)), slow = SLOW.filter(p => active.has(p));
     const batch = [...fast];
     for (let k = 0; k < 2 && slow.length; k++) batch.push(slow[slowIdx++ % slow.length]);
+    const xr = xrot.filter(p => active.has(p));
+    if (xr.length) batch.push(xr[xIdx++ % xr.length]);
     if (!batch.length) { await sleep(500); continue; }
     const row = { t: Date.now() };
     for (const pid of batch) {
@@ -569,8 +676,9 @@ async function poll() {
       fails = 0;
       if (r.err) { miss[pid] = (miss[pid] || 0) + 1; if (miss[pid] >= 5 && r.err === 'NO DATA') { active.delete(pid); log('Se dejó de pedir el PID ' + pid + ' (no responde)'); } continue; }
       miss[pid] = 0;
-      const d = PIDS[pid], v = d.f(r.bytes);
+      const d = PIDS[pid] || XPIDS[pid], v = d.f(r.bytes);
       row[d.k] = v; latest[d.k] = { v, t: Date.now() }; rateCount++;
+      if (XPIDS[pid] && ecu.vals[pid]) { ecu.vals[pid].v = v; ecu.vals[pid].t = Date.now(); }
     }
     if (!active.has('42') && Date.now() - lastRV > 8000 && link === me) {
       lastRV = Date.now();
@@ -580,6 +688,7 @@ async function poll() {
     }
     if (recording && Object.keys(row).length > 1) { addGPS(row); recording.rows.push(row); }
     renderTiles();
+    if (xr.length) renderAll();
   }
 }
 setInterval(() => { rate = rateCount; rateCount = 0; renderRec(); }, 1000);
@@ -608,7 +717,7 @@ function renderTiles() {
 async function keepAwake() { try { if ('wakeLock' in navigator && document.visibilityState === 'visible') wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { /* no disponible */ } }
 document.addEventListener('visibilitychange', () => { if (recording && document.visibilityState === 'visible') keepAwake(); });
 function startRec() {
-  recording = { id: 'r' + Date.now(), start: Date.now(), rows: [], sim, proto, vin, version, codes: lastCodes ? { stored: [...lastCodes.stored], pending: [...lastCodes.pending] } : null };
+  recording = { id: 'r' + Date.now(), start: Date.now(), rows: [], sim, proto, vin, version, codes: lastCodes ? { stored: [...lastCodes.stored], pending: [...lastCodes.pending], mil: lastCodes.mil, count: lastCodes.count } : null, ecu: ecuMeta() };
   $('btn-rec').classList.add('on'); $('btn-rec').setAttribute('aria-label', 'Detener grabación');
   $('clock').classList.add('live');
   keepAwake();
@@ -645,7 +754,11 @@ setInterval(() => { if (recording) { try { localStorage.setItem(CUR, JSON.string
 function toCSV(r) {
   const used = COLS.filter(([k]) => r.rows.some(x => x[k] !== undefined));
   const meta = ['Grabador OBD Outlander', 'inicio=' + new Date(r.start).toISOString(), 'protocolo=' + (r.proto || ''), 'adaptador=' + (r.version || ''), 'vin=' + (r.vin || ''), 'simulado=' + (r.sim ? 'si' : 'no')];
-  if (r.codes) { meta.push('dtc_guardados=' + r.codes.stored.join(' ')); meta.push('dtc_pendientes=' + r.codes.pending.join(' ')); }
+  if (r.codes) {
+    meta.push('dtc_guardados=' + r.codes.stored.join(' ')); meta.push('dtc_pendientes=' + r.codes.pending.join(' '));
+    if (r.codes.mil !== null && r.codes.mil !== undefined) meta.push('luz_check=' + (r.codes.mil ? 'encendida' : 'apagada'));
+  }
+  if (r.ecu) meta.push(...r.ecu);
   const out = ['# ' + meta.join('; '), ['time', ...used.map(c => c[1])].join(',')];
   for (const row of r.rows) out.push([new Date(row.t).toISOString(), ...used.map(([k, , d]) => row[k] === undefined ? '' : row[k].toFixed(d))].join(','));
   return out.join('\n');
@@ -711,7 +824,9 @@ async function readCodes() {
       }
     }
     lastCodes = { stored, pending, mil, count, mons, ff, t: Date.now() };
-    if (recording) recording.codes = { stored: [...stored], pending: [...pending] };
+    if (recording) recording.codes = { stored: [...stored], pending: [...pending], mil, count };
+    await scanAll(true);
+    if (recording) recording.ecu = ecuMeta();
     renderCodes();
   } catch (e) {
     out.innerHTML = '<p class="err">No pude leer los códigos: ' + esc(e.message) + '</p>';
@@ -779,6 +894,7 @@ $('recs').addEventListener('click', async e => {
 /* ---------- Eventos ---------- */
 $('btn-connect').addEventListener('click', () => connect(false));
 $('btn-sim').addEventListener('click', () => connect(true));
+$('btn-scan').addEventListener('click', () => scanAll());
 $('btn-disc').addEventListener('click', () => disconnect(false));
 $('btn-rec').addEventListener('click', () => recording ? stopRec() : startRec());
 $('btn-read').addEventListener('click', readCodes);
