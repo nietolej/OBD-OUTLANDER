@@ -156,8 +156,20 @@ table { border-collapse: collapse; width: 100%; font-size: .88rem; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
 td.num, th.num { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
-select, input[type="text"] { font: inherit; font-size: .88rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; max-width: 100%; }
+select, input[type="text"], input[type="number"], input[type="date"] { font: inherit; font-size: .88rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; max-width: 100%; }
 details summary { cursor: pointer; font-family: var(--f-display); font-size: 1.1rem; font-weight: 600; }
+
+/* Llenados */
+.fill-entry { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px 12px; align-items: end; }
+.fill-entry label { display: grid; gap: 4px; font-size: .8rem; color: var(--ink-2); min-width: 0; }
+.fill-entry label input { width: 100%; box-sizing: border-box; }
+.fill-entry .wide { grid-column: 1 / -1; }
+.fill-entry .check input { width: auto; margin: 0; }
+.fill-entry .check { display: flex; align-items: center; gap: 8px; font-size: .88rem; color: var(--ink); padding-bottom: 6px; }
+.fill-entry .seg { justify-self: start; }
+.fill-entry .seg-wrap { display: grid; gap: 4px; font-size: .8rem; color: var(--ink-2); }
+#fill-table td.note { color: var(--ink-2); font-size: .82rem; }
+#fill-table tr.part td { color: var(--muted); }
 
 /* Códigos */
 .code-entry { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -309,6 +321,26 @@ footer { color: var(--muted); font-size: .8rem; }
       <div class="card">
         <div class="section-head"><h2>Consumo estimado</h2><p id="fuel-note"></p></div>
         <div class="facts" id="fuel-facts" style="margin-top:12px"></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h2>Consumo real por llenados</h2><p>Llena hasta que el surtidor corte solo y anota los km y los litros</p></div>
+        <form class="fill-entry" id="fill-form" style="margin-top:12px" autocomplete="off" novalidate>
+          <label>Fecha<input type="date" id="fill-date" required></label>
+          <div class="seg-wrap"><span>Los km son</span>
+            <div class="seg" role="group" aria-label="Tipo de kilometraje">
+              <button type="button" id="fk-trip" aria-pressed="true">Parcial</button>
+              <button type="button" id="fk-odo" aria-pressed="false">Odómetro total</button>
+            </div></div>
+          <label><span id="fill-km-label">Km del parcial</span><input type="number" id="fill-km" inputmode="decimal" step="0.1" min="0" placeholder="Ej.: 312,5"></label>
+          <label>Litros cargados<input type="number" id="fill-l" inputmode="decimal" step="0.01" min="0" placeholder="Ej.: 54"></label>
+          <label class="check"><input type="checkbox" id="fill-full" checked> Tanque lleno</label>
+          <label class="wide">Nota (opcional)<input type="text" id="fill-note" maxlength="80" placeholder="Ej.: después de arreglar los ventiladores"></label>
+          <div class="wide"><button class="btn primary" type="submit">Agregar llenado</button></div>
+        </form>
+        <p class="error" id="fill-error" hidden style="margin-top:8px"></p>
+        <div class="facts" id="fill-facts" style="margin-top:14px"></div>
+        <div class="table-wrap" style="margin-top:10px"><table id="fill-table"></table></div>
+        <p class="notice" id="fill-foot" style="margin-top:8px"></p>
       </div>
       <div class="two">
         <div class="card">
@@ -779,6 +811,7 @@ function analyze(state) {
   const run = rows.filter(r => r.running);
   const runMin = run.length / 60;
   const add = (sev, area, title, body, evidence = [], todo = []) => F.push({ sev, area, title, body, evidence, todo });
+  let speedK = NaN;
 
   // Códigos
   const stored = state.codes.filter(c => c.kind === 'stored'), pending = state.codes.filter(c => c.kind === 'pending');
@@ -940,7 +973,7 @@ function analyze(state) {
       pairs.push(r.speed / r.gps);
     }
     if (pairs.length >= 20) {
-      const k = median(pairs), pct = (k - 1) * 100, spread = (quant(pairs, 0.75) - quant(pairs, 0.25)) * 100;
+      const k = median(pairs), pct = (k - 1) * 100; speedK = k; const spread = (quant(pairs, 0.75) - quant(pairs, 0.25)) * 100;
       const ev = ['OBD/GPS ' + fmt(k, 3), pairs.length + ' s comparados', 'dispersión ±' + fmt(spread / 2, 1) + ' %'];
       const at60 = 'A 60 km/h reales el OBD marca ' + fmt(60 * k) + ' km/h.';
       const dash = 'Para comparar el tablero, anota lo que marca el velocímetro a una velocidad estable y compáralo con la velocidad GPS del grabador; lo normal es que el tablero marque de 2 a 8 % más que el GPS.';
@@ -987,7 +1020,7 @@ function analyze(state) {
     else if (f.sev === 'crit') score -= 25;
     else if (f.sev === 'warn') score -= 10;
   }
-  return { findings: F, score: Math.max(0, Math.min(100, score)), stored, pending };
+  return { findings: F, score: Math.max(0, Math.min(100, score)), stored, pending, speedK };
 }
 
 /* ---------- Consumo ---------- */
@@ -1123,7 +1156,7 @@ const SEV_LABEL = { crit: 'Urgente', warn: 'Revisar', ok: 'Bien', info: 'Nota' }
 let A = null, FU = null;
 function render() {
   A = analyze(S); FU = fuel(S);
-  renderSource(); renderSummary(); renderFindings(); renderCharts(); renderStats(); renderMapping(); renderCodes(); renderFuel();
+  renderSource(); renderSummary(); renderFindings(); renderCharts(); renderStats(); renderMapping(); renderCodes(); renderFuel(); renderFills();
 }
 
 function renderSource() {
@@ -1351,6 +1384,92 @@ function renderFuel() {
   tips.push('<b>Mantenimiento que rinde en el 4G69:</b> filtro de aire limpio, bujías al intervalo del manual, presión correcta de los cauchos y el ATF de la caja cambiado según el manual.');
   $('tips').innerHTML = tips.map(t => `<li>${t}</li>`).join('');
 }
+
+/* ---------- Llenados (consumo real) ---------- */
+const FILLS_KEY = 'diag-outlander-llenados';
+let fills = (() => { try { const v = JSON.parse(localStorage.getItem(FILLS_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } })();
+let fillKind = 'trip';
+function saveFills() { try { localStorage.setItem(FILLS_KEY, JSON.stringify(fills)); } catch (e) { /* sin almacenamiento */ } }
+function sortedFills() { return [...fills].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id); }
+/* Calcula km/L entre tanques llenos. Con odómetro total, el primer llenado es el punto de partida.
+   Con el parcial, cada llenado trae los km desde el anterior (se asume que el parcial se reinicia). */
+function fillSegments() {
+  const out = []; let lastOdo = null, accKm = 0, accL = 0, n = 0, open = false;
+  for (const e of sortedFills()) {
+    let d = null;
+    if (e.kind === 'trip') d = e.km;
+    else { if (lastOdo !== null) d = e.km - lastOdo; lastOdo = e.km; }
+    if (d === null) { out.push({ e, base: true }); open = false; accKm = accL = n = 0; continue; }
+    accKm += d; accL += e.l; n++; open = true;
+    if (e.full) { out.push({ e, km: accKm, L: accL, n, kml: accKm / accL }); accKm = accL = n = 0; open = false; }
+    else out.push({ e, partial: true, km: d });
+  }
+  return { rows: out, open };
+}
+const fdate = iso => { const [y, m, d] = iso.split('-'); return d + '/' + m + '/' + y; };
+function renderFills() {
+  const { rows } = fillSegments(), done = rows.filter(r => fin(r.kml));
+  const k = A && fin(A.speedK) && Math.abs(A.speedK - 1) > 0.03 ? A.speedK : NaN;
+  const est = FU && fin(FU.l100) && FU.dist >= 15 ? 100 / FU.l100 : NaN;
+  if (!done.length) {
+    $('fill-facts').innerHTML = '';
+  } else {
+    const last = done[done.length - 1], prev = done[done.length - 2];
+    const tKm = done.reduce((s, r) => s + r.km, 0), tL = done.reduce((s, r) => s + r.L, 0);
+    const best = Math.max(...done.map(r => r.kml));
+    const facts = [
+      ['Último tanque', fmt(last.kml, 1), 'km por litro · ' + fmt(100 / last.kml, 1) + ' L/100 km'],
+      ['Promedio', fmt(tKm / tL, 1), 'km/L en ' + fmt(tKm) + ' km'],
+      ['Mejor tanque', fmt(best, 1), 'km por litro'],
+    ];
+    if (prev) { const ch = (last.kml / prev.kml - 1) * 100; facts.push(['Cambio', sgn(ch, 0) + ' %', 'contra el tanque anterior' + (ch > 0 ? ', mejoró' : ch < 0 ? ', empeoró' : '')]); }
+    if (fin(k)) facts.push(['Corregido con GPS', fmt(last.kml / k, 1), 'km/L del último tanque si el odómetro marca ' + fmt(Math.abs(k - 1) * 100, 0) + ' % de ' + (k > 1 ? 'más' : 'menos')]);
+    if (fin(est)) facts.push(['Estimado por la app', fmt(est, 1), 'km/L en el registro cargado']);
+    $('fill-facts').innerHTML = facts.map(([l, v, d]) => `<div class="fact"><div class="label">${l}</div><div class="v num">${v}</div><div class="d">${d}</div></div>`).join('');
+  }
+  $('fill-table').innerHTML = rows.length ? '<thead><tr><th>Fecha</th><th class="num">Km</th><th class="num">Litros</th><th class="num">km/L</th><th class="num">L/100</th><th>Nota</th><th></th></tr></thead><tbody>' +
+    [...rows].reverse().map(r => {
+      const e = r.e, kmTxt = r.base ? 'odóm. ' + fmt(e.km) : fmt(r.km, 1) + (e.kind === 'odo' ? '<br><small>odóm. ' + fmt(e.km) + '</small>' : '');
+      const res = r.base ? '<td class="num" colspan="2">punto de partida</td>' : r.partial ? '<td class="num" colspan="2">parcial, suma al próximo lleno</td>'
+        : `<td class="num"><b>${fmt(r.kml, 1)}</b></td><td class="num">${fmt(100 / r.kml, 1)}</td>`;
+      return `<tr class="${r.partial || r.base ? 'part' : ''}"><td>${fdate(e.date)}</td><td class="num">${kmTxt}</td><td class="num">${fmt(e.l, 2)}</td>${res}<td class="note">${esc(e.note || '')}</td><td><button class="x" type="button" data-fdel="${e.id}" aria-label="Borrar llenado">×</button></td></tr>`;
+    }).join('') + '</tbody>' : '';
+  $('fill-table').querySelectorAll('[data-fdel]').forEach(b => b.addEventListener('click', () => { fills = fills.filter(f => String(f.id) !== b.dataset.fdel); saveFills(); renderFills(); }));
+  $('fill-foot').textContent = !rows.length ? 'Anota cada llenado. Con dos tanques llenos ya puedes ver si una reparación mejoró el consumo.'
+    : !done.length ? 'Falta un llenado con tanque lleno para calcular el primer resultado.'
+    : 'El cálculo usa los km del tablero. Si el velocímetro marca de más, el rendimiento real es menor; graba un recorrido con GPS para corregirlo.';
+}
+function setFillKind(kind) {
+  fillKind = kind;
+  $('fk-trip').setAttribute('aria-pressed', kind === 'trip'); $('fk-odo').setAttribute('aria-pressed', kind === 'odo');
+  $('fill-km-label').textContent = kind === 'trip' ? 'Km del parcial' : 'Odómetro total (km)';
+  $('fill-km').placeholder = kind === 'trip' ? 'Ej.: 312,5' : 'Ej.: 184520';
+}
+$('fk-trip').addEventListener('click', () => setFillKind('trip'));
+$('fk-odo').addEventListener('click', () => setFillKind('odo'));
+$('fill-date').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+{ const lastF = sortedFills().pop(); if (lastF) setFillKind(lastF.kind); }
+$('fill-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const err = msg => { $('fill-error').textContent = msg; $('fill-error').hidden = !msg; };
+  const num = id => parseFloat(String($(id).value).replace(',', '.'));
+  const date = $('fill-date').value, km = num('fill-km'), l = num('fill-l');
+  if (!date) return err('Pon la fecha del llenado.');
+  if (!fin(km) || km <= 0) return err('Escribe los km.');
+  if (!fin(l) || l <= 0 || l > 120) return err('Escribe los litros cargados (entre 0 y 120).');
+  if (fillKind === 'trip' && km > 2000) return err('Más de 2.000 km en un tanque no es posible. ¿Querías poner el odómetro total?');
+  if (fillKind === 'odo') {
+    const prevOdo = sortedFills().filter(f => f.kind === 'odo' && f.date <= date).pop();
+    if (prevOdo && km <= prevOdo.km) return err('El odómetro debe ser mayor que el del llenado anterior (' + fmt(prevOdo.km) + ' km).');
+    if (prevOdo && km - prevOdo.km > 2000) return err('Son más de 2.000 km desde el llenado anterior. Revisa el número o si faltó anotar un llenado.');
+  }
+  if (fills.some(f => f.kind !== fillKind)) return err('Ya tienes llenados anotados con ' + (fillKind === 'trip' ? 'odómetro total' : 'parcial') + '. Usa el mismo tipo para que el cálculo cuadre.');
+  err('');
+  fills.push({ id: Date.now(), date, kind: fillKind, km, l, full: $('fill-full').checked, note: $('fill-note').value.trim() });
+  saveFills();
+  $('fill-km').value = ''; $('fill-l').value = ''; $('fill-note').value = ''; $('fill-full').checked = true;
+  renderFills();
+});
 
 /* ---------- Pestañas ---------- */
 const TABS = ['resumen', 'datos', 'codigos', 'consumo', 'conectar'];
