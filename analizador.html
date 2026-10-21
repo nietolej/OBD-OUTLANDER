@@ -698,6 +698,16 @@ const DTC = {
   P0550: ['Circuito del sensor de presión de la dirección hidráulica'],
   P0560: ['Voltaje del sistema'], P0562: ['Voltaje del sistema bajo', 'Batería, alternador, bornes o tierras.'], P0563: ['Voltaje del sistema alto', 'Regulador del alternador.'],
   P0600: ['Enlace de comunicación serial'], P0601: ['Error de memoria del módulo de control (checksum)'], P0603: ['Error de memoria KAM del módulo de control'], P0604: ['Error de RAM del módulo de control'], P0605: ['Error de ROM del módulo de control'], P0606: ['Falla del procesador del módulo de control'],
+  P0641: ['Voltaje de referencia de sensores "A": circuito abierto', 'Línea de 5 V que alimenta varios sensores. Cableado, conector o ECU.'],
+  P0642: ['Voltaje de referencia de sensores "A": bajo', 'La línea de 5 V que comparten varios sensores está en corto a tierra. Casi siempre es un sensor dañado o un cable pelado, no la ECU. Desconecta los sensores uno por uno midiendo los 5 V.'],
+  P0643: ['Voltaje de referencia de sensores "A": alto', 'Corto de la línea de 5 V con voltaje de batería. Cableado o sensor.'],
+  P0651: ['Voltaje de referencia de sensores "B": circuito abierto'], P0652: ['Voltaje de referencia de sensores "B": bajo', 'Corto a tierra en la segunda línea de 5 V. Desconecta los sensores uno por uno.'], P0653: ['Voltaje de referencia de sensores "B": alto'],
+  P0530: ['Circuito del sensor de presión del refrigerante del A/C', 'Sensor en el tubo de alta del aire acondicionado, conector o cableado. Puede poner los electroventiladores a full.'],
+  P0532: ['Sensor de presión del A/C: señal baja'], P0533: ['Sensor de presión del A/C: señal alta'],
+  P2122: ['Sensor del pedal del acelerador (D): señal baja'], P2123: ['Sensor del pedal del acelerador (D): señal alta'],
+  P2127: ['Sensor del pedal del acelerador (E): señal baja'], P2128: ['Sensor del pedal del acelerador (E): señal alta'],
+  P2135: ['Correlación entre los sensores A y B de la mariposa (TPS)', 'Las dos pistas del sensor no coinciden. Sensor del cuerpo de aceleración, conector o falla en la referencia de 5 V.'],
+  P2138: ['Correlación entre los sensores D y E del pedal del acelerador'],
   P0620: ['Circuito de control del generador (alternador)'], P0621: ['Circuito de la luz "L" del generador'], P0622: ['Circuito de campo "F" del generador'],
   P0700: ['La caja automática tiene una falla guardada (el TCM pide encender la luz)', 'El código real está en el módulo de la caja. Hace falta un escáner con protocolo Mitsubishi para leerlo. Revisa nivel y estado del ATF.'],
   P0705: ['Circuito del sensor de rango de la caja (interruptor P-R-N-D)'], P0706: ['Sensor de rango de la caja: rango o rendimiento'],
@@ -726,6 +736,23 @@ function describe(code) {
   return { title: 'Código de ' + (SYS[sys] || 'otro sistema').toLowerCase(), causes: 'Este módulo no se lee con OBD genérico en tu Outlander; hace falta un escáner con protocolo Mitsubishi.', known: false };
 }
 const DTC_RE = /^[PBCU][0-3][0-9A-F]{3}$/;
+
+/* Sensores que en el 4G69 suelen compartir la referencia de 5 V */
+const REF_CODES = /^P06(4[1-3]|5[1-3]|9[7-9])$/;
+const REF_GROUPS = [
+  ['Cigüeñal (CKP)', /^P033[5-9]$/], ['Árbol de levas (CMP)', /^P034[0-3]$/],
+  ['Mariposa (TPS)', /^P(012[0-3]|022[0-4]|213[5-8])$/], ['Pedal del acelerador', /^P212[2-8]$/],
+  ['Flujo de aire (MAF)', /^P010[0-3]$/], ['Aire de admisión (IAT)', /^P011[0-3]$/],
+  ['Presión del múltiple (MAP)', /^P010[5-8]$/], ['Presión del A/C', /^P053[0-4]$/], ['Presión EVAP', /^P045[0-3]$/],
+];
+function refPattern(codes) {
+  const list = [...new Set(codes.map(c => c.code.toUpperCase()))];
+  const ref = list.filter(c => REF_CODES.test(c));
+  const groups = REF_GROUPS.map(([name, re]) => ({ name, codes: list.filter(c => re.test(c)) })).filter(g => g.codes.length);
+  if ((ref.length && groups.length >= 1) || groups.length >= 3) return { ref, groups };
+  return null;
+}
+function inRefPattern(code) { return REF_CODES.test(code) || REF_GROUPS.some(([, re]) => re.test(code)); }
 
 /* ---------- Análisis ---------- */
 function analyze(state) {
@@ -878,15 +905,36 @@ function analyze(state) {
     }
   }
 
+  // Patrón: varios sensores fallando a la vez (posible referencia de 5 V)
+  const pat = refPattern(state.codes);
+  if (pat) {
+    const coldFan = F.some(f => f.area === 'Enfriamiento' && f.sev === 'warn');
+    const over = F.find(f => f.area === 'Carga' && f.title === 'Sobrecarga');
+    const ev = [...(pat.ref.length ? ['referencia: ' + pat.ref.join(' ')] : []), ...pat.groups.map(g => g.name + ': ' + g.codes.join(' '))];
+    const body = (pat.ref.length
+      ? 'La computadora reporta la línea de 5 V caída (' + pat.ref.join(', ') + ') y, al mismo tiempo, fallas en ' + pat.groups.length + ' sensores distintos. Esos sensores comparten esa alimentación, así que lo más probable es una sola causa: un sensor en corto o un cable pelado que tumba los 5 V, no ' + (pat.groups.length + pat.ref.length) + ' piezas dañadas.'
+      : 'Hay fallas en ' + pat.groups.length + ' sensores distintos a la vez. Es raro que se dañen juntos; suele haber una causa común: la línea de 5 V que comparten, una tierra o un conector de la ECU.')
+      + ' Con esta falla la ECU suele entrar en modo de emergencia y poner los electroventiladores a full todo el tiempo.'
+      + (coldFan ? ' Eso también explicaría que el motor no llegue a su temperatura: no cambies el termostato hasta resolver esto.' : '')
+      + (over ? ' Además hay sobrecarga del alternador; corrígela, porque el exceso de voltaje daña sensores y relés.' : '');
+    add(pat.ref.length ? 'crit' : 'warn', 'Patrón de códigos', pat.ref.length ? 'Falla común en la referencia de 5 V' : 'Varios sensores fallando a la vez', body, ev, [
+      'Borra los códigos y arranca. Si vuelven juntos, la falla es actual; si no, eran históricos.',
+      'Con la llave en ON, mide entre el cable de referencia del sensor de la mariposa y tierra: deben ser unos 5,0 V.',
+      'Si marca bajo, desconecta uno por uno el sensor de presión del A/C, la MAF, el sensor de la mariposa y los de cigüeñal y levas. El que al soltarlo devuelva los 5 V es el que tiene el corto.',
+      'Revisa el arnés cerca del múltiple de escape, el radiador y el alternador, donde suele pelarse.',
+    ]);
+  }
+
   // Cobertura
   const missing = ['rpm', 'speed', 'ect', 'stft', 'ltft', 'o2s1', 'o2s2', 'maf'].filter(k => !has(k));
   if (missing.length) add('info', 'Datos', 'Señales que faltan en el registro', 'Sin ellas algunas revisiones no se pudieron hacer. Agrégalas en Car Scanner antes de grabar, o asígnalas en la pestaña Datos si están en el archivo con otro nombre.', missing.map(k => SIG[k].label));
   if (runMin > 0 && runMin < 8) add('info', 'Datos', 'Registro corto', 'Hay ' + fmt(runMin, 1) + ' minutos con el motor encendido. Con 15 a 20 minutos desde el arranque en frío el diagnóstico es más completo.');
 
   const order = { crit: 0, warn: 1, info: 3, ok: 2 };
-  F.sort((a, b) => order[a.sev] - order[b.sev]);
+  F.sort((a, b) => order[a.sev] - order[b.sev] || (b.area === 'Patrón de códigos') - (a.area === 'Patrón de códigos'));
   let score = 100;
   for (const f of F) {
+    if (f.area === 'Patrón de códigos') continue; // explica códigos ya descontados
     if (f.area === 'Código guardado') score -= 25;
     else if (f.area === 'Código pendiente') score -= 10;
     else if (f.sev === 'crit') score -= 25;
@@ -1199,6 +1247,9 @@ function dtcRow(c, removable) {
     ${removable ? `<button class="x" type="button" data-del="${esc(c.code)}" aria-label="Quitar ${esc(c.code)}">×</button>` : '<span></span>'}</div>`;
 }
 function relatedHint(code) {
+  const pt = A && A.findings.find(f => f.area === 'Patrón de códigos');
+  if (pt && REF_CODES.test(code)) return `<p style="margin-top:4px"><strong>Según tus códigos:</strong> este es probablemente el origen de las otras fallas de sensores. Mira el hallazgo «${esc(pt.title)}» en el resumen.</p>`;
+  if (pt && inRefPattern(code)) return `<p style="margin-top:4px"><strong>Según tus códigos:</strong> probablemente es consecuencia de una falla común (${esc(pt.title)}), no del sensor. Resuelve esa primero.</p>`;
   const f = A && A.findings.find(f => f.area === 'Mezcla');
   if (/^P017[0-2]$/.test(code) && f) return `<p style="margin-top:4px"><strong>Según tu registro:</strong> ${esc(f.title.toLowerCase())}.</p>`;
   const cat = A && A.findings.find(f => f.area === 'Catalizador');
