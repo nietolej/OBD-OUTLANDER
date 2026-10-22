@@ -74,6 +74,8 @@ select { color: var(--ink); background: var(--surface); border: 1px solid var(--
 .meta b { color: var(--ink); font-weight: 600; }
 .note { font-size: .85rem; color: var(--muted); }
 .err { font-size: .9rem; color: var(--crit-ink); }
+.warnmsg { color: var(--warn-ink); }
+.ptable .how.err { color: var(--crit-ink); } .ptable .how.warnmsg { color: var(--warn-ink); } .ptable .how.okmsg { color: var(--good-ink); font-size: .7rem; }
 .okmsg { font-size: .9rem; color: var(--good-ink); }
 /* Grabación */
 .recbar { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
@@ -189,6 +191,12 @@ ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--
         <button class="btn small" id="btn-clear-no" type="button">Cancelar</button>
       </div>
       <div id="dtc-out"><p class="note">Toca Leer códigos con el adaptador conectado. Los códigos se guardan junto con la grabación.</p></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-m06">
+      <div class="row between"><h2 id="h-m06">Autodiagnósticos (modo 06)</h2><button class="btn small" id="btn-m06" type="button" disabled>Leer autodiagnósticos</button></div>
+      <p class="note">La computadora prueba por su cuenta el catalizador, las sondas, el EVAP y otros sistemas, y guarda cada resultado con su límite. Aquí ves cuáles pasan, cuáles fallan y cuáles están cerca del límite, antes de que aparezca un código. Se leen también al tocar Leer códigos.</p>
+      <div id="m06-out"></div>
     </section>
 
     <section class="card" aria-labelledby="h-list">
@@ -380,6 +388,12 @@ class SimLink {
     if (c === '07') return this.sp('47' + '017100000000');
     if (c === '04') return '44';
     if (c === '020200') return this.sp('42020000' + '00');
+    if (c === '0600') return this.sp('4600' + 'E8000000');
+    if (c === '0601') return this.sp('4601110123' + '0190') + '\r' + this.sp('4601120050' + '0064');
+    if (c === '0602') return this.sp('46028100C8' + '0096');
+    if (c === '0603') return this.sp('46030103E0' + '0400');
+    if (c === '0605') return this.sp('4605020258' + '01F4');
+    if (/^06[0-9A-F]{2}$/.test(c)) return 'NO DATA';
     if (c === '0902') return 'NO DATA';
     if (c.startsWith('01') && c.length === 4) {
       const p = c.slice(2);
@@ -474,7 +488,7 @@ function setStatus(kind, text) {
   const on = kind === 'on' || kind === 'sim';
   $('btn-connect').hidden = on || kind === 'busy'; $('btn-sim').hidden = on || kind === 'busy';
   $('btn-disc').hidden = !(on || kind === 'busy');
-  $('btn-rec').disabled = !on; $('btn-read').disabled = !on; $('btn-scan').disabled = !on || scanning; $('btn-clear').disabled = !on;
+  $('btn-rec').disabled = !on; $('btn-read').disabled = !on; $('btn-scan').disabled = !on || scanning; $('btn-clear').disabled = !on; $('btn-m06').disabled = !on;
   $('proto').disabled = on || kind === 'busy';
   if (!on && !recording) $('rec-meta').textContent = 'Conéctate para empezar';
 }
@@ -718,7 +732,7 @@ function renderTiles() {
 async function keepAwake() { try { if ('wakeLock' in navigator && document.visibilityState === 'visible') wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { /* no disponible */ } }
 document.addEventListener('visibilitychange', () => { if (recording && document.visibilityState === 'visible') keepAwake(); });
 function startRec() {
-  recording = { id: 'r' + Date.now(), start: Date.now(), rows: [], sim, proto, vin, version, codes: lastCodes ? { stored: [...lastCodes.stored], pending: [...lastCodes.pending], mil: lastCodes.mil, count: lastCodes.count } : null, ecu: ecuMeta() };
+  recording = { id: 'r' + Date.now(), start: Date.now(), rows: [], sim, proto, vin, version, codes: lastCodes ? { stored: [...lastCodes.stored], pending: [...lastCodes.pending], mil: lastCodes.mil, count: lastCodes.count } : null, ecu: ecuMeta(), m06: m06Meta() };
   $('btn-rec').classList.add('on'); $('btn-rec').setAttribute('aria-label', 'Detener grabación');
   $('clock').classList.add('live');
   keepAwake();
@@ -760,6 +774,7 @@ function toCSV(r) {
     if (r.codes.mil !== null && r.codes.mil !== undefined) meta.push('luz_check=' + (r.codes.mil ? 'encendida' : 'apagada'));
   }
   if (r.ecu) meta.push(...r.ecu);
+  if (r.m06) meta.push(r.m06);
   const out = ['# ' + meta.join('; '), ['time', ...used.map(c => c[1])].join(',')];
   for (const row of r.rows) out.push([new Date(row.t).toISOString(), ...used.map(([k, , d]) => row[k] === undefined ? '' : row[k].toFixed(d))].join(','));
   return out.join('\n');
@@ -772,6 +787,111 @@ function renderRec() {
     $('clock').textContent = '0:00';
     $('rec-meta').textContent = 'Listo para grabar · ' + rate + ' valores por segundo';
   }
+}
+
+/* ---------- Modo 06: resultados de los autodiagnósticos ---------- */
+const MID = { '01': 'Sonda O2 B1S1', '02': 'Sonda O2 B1S2', '03': 'Sonda O2 B1S3', '04': 'Sonda O2 B1S4', '05': 'Sonda O2 B2S1', '06': 'Sonda O2 B2S2',
+  '21': 'Catalizador banco 1', '22': 'Catalizador banco 2', '31': 'EGR', '35': 'Distribución variable banco 1', '39': 'EVAP fuga 0,150"', '3A': 'EVAP fuga 0,090"',
+  '3B': 'EVAP fuga 0,040"', '3C': 'EVAP fuga 0,020"', '3D': 'Válvula de purga EVAP', '41': 'Calentador sonda B1S1', '42': 'Calentador sonda B1S2',
+  '61': 'Calentador del catalizador', '71': 'Aire secundario', '81': 'Sistema de combustible banco 1', 'A1': 'Fallos de encendido (general)' };
+for (let i = 1; i <= 12; i++) MID[(0xA1 + i).toString(16).toUpperCase()] = 'Fallos de encendido, cilindro ' + i;
+let lastM06 = null;
+function m06Name(r) {
+  if (r.can) {
+    const n = MID[r.mid] || 'Monitor ' + r.mid;
+    if (/^A[2-9A-D]$/.test(r.mid) && r.tid === '0B') return n + ' (promedio últimos 10 ciclos)';
+    if (/^A[2-9A-D]$/.test(r.mid) && r.tid === '0C') return n + ' (ciclo actual)';
+    return n + ' · prueba ' + r.tid;
+  }
+  return 'Prueba ' + r.tid + ' · componente ' + r.cid;
+}
+function m06Eval(r) {
+  if (r.can) {
+    if (r.v === 0 && r.min === 0 && r.max === 0) return 'none';
+    if (r.v < r.min || r.v > r.max) return 'fail';
+    const span = Math.max(1, r.max - r.min);
+    return (Math.min(r.v - r.min, r.max - r.v) / span < 0.1 && r.max !== 0xFFFF && r.min !== 0) ? 'near' : 'pass';
+  }
+  if (r.v === 0 && r.lim === 0) return 'none';
+  if (r.kind === 'max') { if (r.v > r.lim) return 'fail'; return r.lim > 0 && (r.lim - r.v) / r.lim < 0.1 ? 'near' : 'pass'; }
+  if (r.v < r.lim) return 'fail';
+  return r.lim > 0 && (r.v - r.lim) / r.lim < 0.1 ? 'near' : 'pass';
+}
+function parseM06(raw, can, req) {
+  const out = [];
+  const ls = hexLines(raw);
+  if (!can) {
+    for (const l of ls) {
+      if (!l.startsWith('46' + req)) continue;
+      const b = bytesOf(l.slice(4));
+      for (let i = 0; i + 4 < b.length + 0; i += 5) {
+        const cid = b[i], v = b[i + 1] * 256 + b[i + 2], lim = b[i + 3] * 256 + b[i + 4];
+        if (lim === undefined || isNaN(lim)) break;
+        out.push({ can: false, tid: req, cid: (cid & 0x7f).toString(16).padStart(2, '0').toUpperCase(), kind: cid & 0x80 ? 'min' : 'max', v, lim });
+      }
+    }
+  } else {
+    const all = ls.filter(l => !/^[0-9A-F]{3}$/.test(l)).join('');
+    const i = all.indexOf('46' + req); if (i < 0) return out;
+    const b = bytesOf(all.slice(i + 2));
+    for (let k = 0; k + 8 < b.length; k += 9) {
+      const h = x => x.toString(16).padStart(2, '0').toUpperCase();
+      out.push({ can: true, mid: h(b[k]), tid: h(b[k + 1]), uas: b[k + 2], v: b[k + 3] * 256 + b[k + 4], min: b[k + 5] * 256 + b[k + 6], max: b[k + 7] * 256 + b[k + 8] });
+    }
+  }
+  return out;
+}
+async function readMode06() {
+  const out = $('m06-out');
+  out.innerHTML = '<p class="note">Leyendo autodiagnósticos…</p>';
+  $('btn-m06').disabled = true;
+  const can = /CAN/.test(proto);
+  const ids = [];
+  try {
+    for (const base of ['00', '20', '40', '60', '80', 'A0', 'C0', 'E0']) {
+      if (base !== '00' && !ids.includes(base)) break;
+      const raw = await elm.cmd('06' + base, 5000);
+      if (!raw || errOf(raw)) break;
+      const l = hexLines(raw).find(x => x.startsWith('46' + base) && x.length >= 12);
+      if (!l) break;
+      const b = bytesOf(l.slice(4, 12)), b0 = parseInt(base, 16);
+      for (let i = 0; i < 32; i++) if (b[i >> 3] & (0x80 >> (i & 7))) ids.push((b0 + i + 1).toString(16).padStart(2, '0').toUpperCase());
+    }
+    let list = ids.filter(x => !['20', '40', '60', '80', 'A0', 'C0', 'E0'].includes(x));
+    let probed = false;
+    if (!list.length && !can) { probed = true; for (let i = 1; i <= 0x10; i++) list.push(i.toString(16).padStart(2, '0').toUpperCase()); }
+    const res = [];
+    for (const id of list) {
+      if (!link) break;
+      const raw = await elm.cmd('06' + id, 4000, probed);
+      if (!raw || errOf(raw)) continue;
+      res.push(...parseM06(raw, can, id));
+    }
+    lastM06 = { t: Date.now(), can, res };
+    if (recording) recording.m06 = m06Meta();
+    renderM06();
+  } catch (e) {
+    out.innerHTML = '<p class="err">No pude leer los autodiagnósticos: ' + esc(e.message) + '</p>';
+  }
+  $('btn-m06').disabled = !link;
+}
+function m06Meta() {
+  if (!lastM06 || !lastM06.res.length) return null;
+  return 'modo06=' + lastM06.res.map(r => r.can ? 'M' + r.mid + '-' + r.tid + ':' + r.v + ':' + r.min + ':' + r.max : 'T' + r.tid + '-' + r.cid + ':' + r.v + ':' + (r.kind === 'min' ? r.lim : '') + ':' + (r.kind === 'max' ? r.lim : '')).join(' ');
+}
+function renderM06() {
+  const m = lastM06; if (!m) return;
+  const out = $('m06-out');
+  if (!m.res.length) { out.innerHTML = '<p class="note">La computadora no entregó resultados del modo 06. Algunas computadoras de esta época no lo usan, o necesitan completar un ciclo de manejo después de un borrado de códigos.</p>'; return; }
+  const ev = m.res.map(r => [r, m06Eval(r)]);
+  const n = k => ev.filter(x => x[1] === k).length;
+  const lab = { fail: ['err', 'Fuera de límite'], near: ['warnmsg', 'Cerca del límite'], pass: ['okmsg', 'Pasa'], none: ['note', 'Sin resultado aún'] };
+  const order = { fail: 0, near: 1, pass: 2, none: 3 };
+  ev.sort((a, b) => order[a[1]] - order[b[1]]);
+  out.innerHTML = `<p class="meta"><b>${m.res.length}</b> pruebas · <span class="err">${n('fail')} fuera de límite</span> · <span class="warnmsg">${n('near')} cerca del límite</span> · <span class="okmsg">${n('pass')} pasan</span>${n('none') ? ' · ' + n('none') + ' sin resultado aún' : ''}</p>` +
+    (m.can ? '' : '<p class="note">En la línea K, qué mide cada prueba lo define Mitsubishi, así que se muestra por número. El resultado (pasa o falla) sí es confiable, porque la computadora entrega su propio límite.</p>') +
+    `<div style="overflow-x:auto"><table class="ptable"><tbody>${ev.map(([r, e]) => `<tr><td>${esc(m06Name(r))}<div class="how ${lab[e][0]}">${lab[e][1]}</div></td><td class="val">${r.v}<div class="how">${r.can ? 'rango ' + r.min + '–' + r.max : (r.kind === 'max' ? 'máx. ' : 'mín. ') + r.lim}</div></td></tr>`).join('')}</tbody></table></div>` +
+    `<p class="note">Leído a las ${new Date(m.t).toLocaleTimeString('es-VE', { hour12: false })}. Se guarda en la próxima grabación y el analizador lo revisa.</p>`;
 }
 
 /* ---------- Códigos ---------- */
@@ -829,6 +949,7 @@ async function readCodes() {
     await scanAll(true);
     if (recording) recording.ecu = ecuMeta();
     renderCodes();
+    await readMode06();
   } catch (e) {
     out.innerHTML = '<p class="err">No pude leer los códigos: ' + esc(e.message) + '</p>';
   }
@@ -899,6 +1020,7 @@ $('btn-scan').addEventListener('click', () => scanAll());
 $('btn-disc').addEventListener('click', () => disconnect(false));
 $('btn-rec').addEventListener('click', () => recording ? stopRec() : startRec());
 $('btn-read').addEventListener('click', readCodes);
+$('btn-m06').addEventListener('click', readMode06);
 $('btn-clear').addEventListener('click', () => { $('clear-confirm').hidden = false; });
 $('btn-clear-no').addEventListener('click', () => { $('clear-confirm').hidden = true; });
 $('btn-clear-yes').addEventListener('click', clearCodes);

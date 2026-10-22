@@ -832,6 +832,32 @@ function analyze(state) {
       hist ? since : [], d.causes ? [d.causes] : []);
   }
 
+  // Autodiagnósticos de la computadora (modo 06)
+  if (meta.modo06) {
+    const MID = { '01': 'sonda O2 B1S1', '02': 'sonda O2 B1S2', '21': 'catalizador', '31': 'EGR', '39': 'EVAP', '3A': 'EVAP', '3B': 'EVAP', '3C': 'EVAP', '3D': 'válvula de purga', '41': 'calentador sonda B1S1', '42': 'calentador sonda B1S2', '81': 'sistema de combustible', 'A1': 'fallos de encendido' };
+    for (let i = 1; i <= 12; i++) MID[(0xA1 + i).toString(16).toUpperCase()] = 'fallos de encendido cilindro ' + i;
+    const tests = meta.modo06.split(/\s+/).map(x => {
+      const m = x.match(/^([TM])([0-9A-F]{2})-([0-9A-F]{2}):(\d+):(\d*):(\d*)$/); if (!m) return null;
+      const [, kind, a, b, v, mn, mx] = m, val = +v, min = mn === '' ? null : +mn, max = mx === '' ? null : +mx;
+      const name = kind === 'M' ? (MID[a] ? MID[a][0].toUpperCase() + MID[a].slice(1) : 'Monitor ' + a) + ' (prueba ' + b + ')' : 'Prueba ' + a + ', componente ' + b;
+      let st = 'pass';
+      if (val === 0 && (min || 0) === 0 && (max || 0) === 0) st = 'none';
+      else if ((min !== null && val < min) || (max !== null && val > max)) st = 'fail';
+      else if ((max !== null && max > 0 && (max - val) / max < 0.1 && max !== 65535) || (min !== null && min > 0 && (val - min) / min < 0.1)) st = 'near';
+      return { name, val, min, max, st };
+    }).filter(Boolean);
+    const lim = t => (t.min !== null ? 'mín. ' + t.min : '') + (t.min !== null && t.max !== null ? ', ' : '') + (t.max !== null ? 'máx. ' + t.max : '');
+    const fails = tests.filter(t => t.st === 'fail'), near = tests.filter(t => t.st === 'near'), done = tests.filter(t => t.st !== 'none');
+    const kline = tests.some(t => /^Prueba/.test(t.name)) ? ' En tu camioneta (línea K) Mitsubishi define qué mide cada prueba, así que se identifican por número; el resultado sí es confiable porque lo compara la propia computadora.' : '';
+    if (fails.length) add('warn', 'Autodiagnóstico', fails.length === 1 ? 'Una prueba interna fuera de límite' : fails.length + ' pruebas internas fuera de límite',
+      'La computadora probó el sistema y el resultado quedó fuera de su propio límite. Si se repite, terminará en un código de falla.' + kline,
+      fails.map(t => t.name + ': ' + t.val + ' (' + lim(t) + ')'), ['Graba otro recorrido y vuelve a leer los autodiagnósticos para confirmar que se repite.', 'Si la prueba es de fallos de encendido o del catalizador, revisa bujías y bobinas antes de que dañen el catalizador.']);
+    if (near.length) add('info', 'Autodiagnóstico', near.length === 1 ? 'Una prueba cerca del límite' : near.length + ' pruebas cerca del límite',
+      'Pasan, pero con menos de 10 % de margen. Vale la pena vigilarlas en las próximas grabaciones.' + (fails.length ? '' : kline), near.map(t => t.name + ': ' + t.val + ' (' + lim(t) + ')'));
+    if (!fails.length && done.length) add('ok', 'Autodiagnóstico', 'Autodiagnósticos dentro de límites', 'La computadora reportó ' + done.length + ' pruebas internas con resultado y ' + (near.length ? 'ninguna fuera de su límite.' : 'todas pasan con margen.') + (near.length ? '' : kline), [done.length + ' pruebas']);
+    if (!done.length && tests.length) add('info', 'Autodiagnóstico', 'Autodiagnósticos sin resultados', 'La computadora todavía no corrió sus pruebas internas. Pasa después de borrar códigos o desconectar la batería; se completan con unos días de manejo.');
+  }
+
   // Temperatura del motor
   if (has('ect') && run.length > 30) {
     const ect = vals(run, 'ect');
