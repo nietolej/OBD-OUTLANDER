@@ -260,6 +260,7 @@ const XPIDS = {
   '18': { name: 'Sonda O2 B2S1', col: 'Sensor de oxígeno Banco 2 - Sensor 1 voltaje (V)', unit: 'V', dec: 3, n: 1, f: b => b[0] / 200 },
   '19': { name: 'Sonda O2 B2S2', col: 'Sensor de oxígeno Banco 2 - Sensor 2 voltaje (V)', unit: 'V', dec: 3, n: 1, f: b => b[0] / 200 },
   '1C': { name: 'Norma OBD del carro', key: 'norma_obd', unit: '', dec: 0, n: 1, f: b => b[0], once: true, txt: v => ({ 1: 'OBD-II (CARB)', 2: 'OBD (EPA)', 3: 'OBD y OBD-II', 4: 'OBD-I', 5: 'Sin OBD', 6: 'EOBD (Europa)', 7: 'EOBD y OBD-II', 9: 'EOBD, OBD y OBD-II', 11: 'JOBD (Japón)', 13: 'JOBD y EOBD' })[v] || 'Tipo ' + v },
+  '1E': { name: 'Entrada auxiliar (toma de fuerza)', key: 'toma_fuerza', unit: '', dec: 0, n: 1, f: b => b[0], once: true, txt: v => v & 1 ? 'Activa' : 'Inactiva' },
   '1F': { name: 'Tiempo desde el arranque', key: 's_desde_arranque', unit: 's', dec: 0, n: 2, f: u16, once: true },
   '21': { name: 'Km recorridos con la luz de check engine encendida', key: 'km_con_luz', unit: 'km', dec: 0, n: 2, f: u16, once: true },
   '2C': { name: 'EGR comandada', unit: '%', dec: 1, n: 1, f: b => b[0] * 100 / 255 },
