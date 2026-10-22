@@ -272,7 +272,7 @@ const VEHICLES = {
     spec: [['Motor', '2.4 L 4G69 MIVEC'], ['Chasis', 'CU5W'], ['Caja', 'automática INVECS-II'], ['Tracción', '4x4'], ['Protocolo', 'línea K (ISO 9141 / KWP)']],
     auto: true, idle: [650, 900], thermo: 'abre alrededor de 82 °C', box: 'el ATF de la caja automática', kind: 'camioneta' },
   vitara: { id: 'vitara', name: 'Vitara', full: 'Vitara 2001', sub: '2 puertas · Suzuki / Chevrolet', make: 'Suzuki', mut: 'Suzuki SDL', engine: '1.6 L G16B 16V', engineShort: 'G16B', displ: 1.590,
-    spec: [['Motor', '1.6 L G16B 16V'], ['Caja', 'manual de 5 velocidades'], ['Puertas', '2'], ['OBD-II', 'por confirmar']],
+    spec: [['Motor', '1.6 L G16B 16V'], ['Caja', 'sincrónica (manual) de 5 velocidades'], ['Puertas', '2'], ['OBD-II', 'por confirmar']],
     auto: false, idle: [650, 850], thermo: 'abre alrededor de 82 °C (algunos repuestos a 88 °C)', box: 'el aceite de la caja (GL-4 75W-90)', kind: 'camioneta' },
 };
 const VEH_KEY = 'obd-vehiculo';
@@ -294,7 +294,7 @@ function renderVehicle() {
   const v = V();
   $('veh-sub').textContent = v.full + ' · ' + v.engine;
   Object.keys(VEHICLES).forEach(k => { const b = $('veh-' + k); b.setAttribute('aria-pressed', k === vehId ? 'true' : 'false'); b.disabled = !!recording && k !== vehId; });
-  $('veh-note').textContent = 'Las grabaciones quedan marcadas con este vehículo, y el analizador usa sus datos: motor, cilindrada, ralentí y caja.' + (recording ? ' Detén la grabación para cambiarlo.' : '');
+  $('veh-note').textContent = 'Las grabaciones quedan marcadas con este vehículo, y el analizador usa sus datos: motor, cilindrada, ralentí y tipo de caja (automática o sincrónica).' + (recording ? ' Detén la grabación para cambiarlo.' : '');
   $('vitara-card').hidden = vehId !== 'vitara';
   $('flash-codes').innerHTML = FLASH.map(([c, d]) => `<div class="code"><div class="c">${c}</div><div class="note">${d}</div></div>`).join('');
 }

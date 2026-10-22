@@ -419,7 +419,7 @@ const VEHICLES = {
     spec: [['Motor', '2.4 L 4G69 MIVEC'], ['Chasis', 'CU5W'], ['Caja', 'automática INVECS-II'], ['Tracción', '4x4'], ['Protocolo', 'línea K (ISO 9141 / KWP)']],
     auto: true, idle: [650, 900], thermo: 'abre alrededor de 82 °C', box: 'el ATF de la caja automática', kind: 'camioneta' },
   vitara: { id: 'vitara', name: 'Vitara', full: 'Vitara 2001', sub: '2 puertas · Suzuki / Chevrolet', make: 'Suzuki', mut: 'Suzuki SDL', engine: '1.6 L G16B 16V', engineShort: 'G16B', displ: 1.590,
-    spec: [['Motor', '1.6 L G16B 16V'], ['Caja', 'manual de 5 velocidades'], ['Puertas', '2'], ['OBD-II', 'por confirmar']],
+    spec: [['Motor', '1.6 L G16B 16V'], ['Caja', 'sincrónica (manual) de 5 velocidades'], ['Puertas', '2'], ['OBD-II', 'por confirmar']],
     auto: false, idle: [650, 850], thermo: 'abre alrededor de 82 °C (algunos repuestos a 88 °C)', box: 'el aceite de la caja (GL-4 75W-90)', kind: 'camioneta' },
 };
 let VEH = VEHICLES.outlander;
@@ -1477,7 +1477,7 @@ function renderFuel() {
     const hiB = bands.filter(x => x.lo >= 90).sort((x, y) => y.l100 - x.l100)[0];
     if (hiB && hiB.l100 > best * 1.12) tips.push(`<b>La velocidad cuesta gasolina.</b> Entre ${hiB.hi > 200 ? 'más de ' + hiB.lo : hiB.lo + ' y ' + hiB.hi} km/h gastaste ${fmt((hiB.l100 / best - 1) * 100)} % más que en tu mejor rango (${b.lo}–${b.hi > 200 ? '+' : b.hi} km/h).`);
   }
-  if (f.accN + f.wotN >= 3) tips.push(`<b>Acelera más suave.</b> Hubo ${f.accN + f.wotN} arranques fuertes o a fondo. ${VEH.auto ? 'La caja automática de 4 marchas cambia antes y el motor queda en menos RPM si pisas el acelerador de forma progresiva.' : 'Con caja manual, pasa a la siguiente marcha antes de las 2.500–3.000 rpm y usa la 5.ª en carretera.'}`);
+  if (f.accN + f.wotN >= 3) tips.push(`<b>Acelera más suave.</b> Hubo ${f.accN + f.wotN} arranques fuertes o a fondo. ${VEH.auto ? 'La caja automática de 4 marchas cambia antes y el motor queda en menos RPM si pisas el acelerador de forma progresiva.' : 'Con caja sincrónica, pasa a la siguiente marcha antes de las 2.500–3.000 rpm y usa la 5.ª en carretera.'}`);
   if (f.hiS / Math.max(1, f.runS) > 0.1) tips.push(`<b>Menos tiempo arriba de 3.000 rpm.</b> El ${fmt(f.hiS / f.runS * 100)} % del recorrido el motor estuvo alto de vueltas.`);
   for (const x of A.findings) {
     if (x.area === 'Mezcla' && x.sev !== 'ok' && x.sev !== 'info') tips.push(`<b>Corrige la mezcla.</b> ${esc(x.title)}: mientras la computadora compense, el consumo y la potencia se resienten.`);
