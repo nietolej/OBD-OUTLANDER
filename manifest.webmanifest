@@ -1,6 +1,6 @@
 {
-  "name": "Grabador OBD Outlander",
-  "short_name": "OBD Outlander",
+  "name": "Grabador OBD",
+  "short_name": "Grabador OBD",
   "start_url": "index.html",
   "scope": "./",
   "display": "standalone",

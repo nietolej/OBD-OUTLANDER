@@ -69,6 +69,10 @@ button, .btn { font: inherit; cursor: pointer; }
 .vin { font-family: var(--f-mono); font-size: .82rem; letter-spacing: .12em; color: var(--band-ink); border: 1px solid #ffffff2e; border-radius: 4px; padding: 3px 8px; display: inline-block; margin-top: 8px; }
 .spec { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .82rem; color: var(--band-muted); }
 .spec b { color: var(--band-ink); font-weight: 500; }
+.vehbox { display: grid; gap: 8px; justify-items: start; }
+.veh-pick { font-size: .82rem; color: var(--band-muted); display: inline-flex; gap: 8px; align-items: center; }
+.veh-pick select { font: inherit; font-size: .88rem; color: var(--band-ink); background: transparent; border: 1px solid #ffffff3d; border-radius: 6px; padding: 4px 8px; }
+.veh-pick select option { color: #10161c; background: #fbfcfd; }
 
 /* Pestañas */
 .tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
@@ -218,16 +222,13 @@ footer { color: var(--muted); font-size: .8rem; }
 <header class="band">
   <div class="wrap">
     <div>
-      <h1>Diagnóstico Outlander</h1>
-      <p class="sub">Mitsubishi Outlander 2007 · primera generación</p>
+      <h1>Diagnóstico <span id="veh-h1">Outlander</span></h1>
+      <p class="sub" id="veh-sub">Mitsubishi Outlander 2007 · primera generación</p>
       <a href="index.html" style="color:var(--band-ink);font-size:.9rem">← Grabador</a>
     </div>
-    <div class="spec">
-      <span>Motor <b>2.4 L 4G69 MIVEC</b></span>
-      <span>Chasis <b>CU5W</b></span>
-      <span>Caja <b>automática INVECS-II</b></span>
-      <span>Tracción <b>4x4</b></span>
-      <span>Protocolo <b>línea K (ISO 9141 / KWP)</b></span>
+    <div class="vehbox">
+      <label class="veh-pick" for="veh-sel">Vehículo <select id="veh-sel"><option value="outlander">Outlander 2007</option><option value="vitara">Vitara 2001</option></select></label>
+      <div class="spec" id="veh-spec"></div>
     </div>
   </div>
 </header>
@@ -351,7 +352,7 @@ footer { color: var(--muted); font-size: .8rem; }
       <div class="two">
         <div class="card">
           <h3>Consumo por rango de velocidad</h3>
-          <p class="notice">Litros cada 100 km. La barra más corta es donde tu Outlander rinde más.</p>
+          <p class="notice">Litros cada 100 km. La barra más corta es donde tu <span class="veh-name">Outlander</span> rinde más.</p>
           <div class="bars" id="band-bars" style="margin-top:12px"></div>
         </div>
         <div class="card">
@@ -373,7 +374,7 @@ footer { color: var(--muted); font-size: .8rem; }
           <li><div><h3>Enchufa el adaptador</h3><p>El conector OBD está debajo del tablero, del lado del conductor. Enchúfalo con el carro apagado y luego pon la llave en ON. La luz del adaptador debe encender.</p></div></li>
           <li><div><h3>Empareja el Bluetooth</h3><p>En Ajustes → Bluetooth del teléfono busca <b>OBDII</b> (a veces aparece como OBD2 o V-LINK) y emparéjalo con la clave <b>1234</b>; si no la acepta, usa <b>0000</b>.</p></div></li>
           <li><div><h3>Instala Car Scanner desde Google Play</h3><p>Busca <b>Car Scanner ELM OBD2</b> en Play Store. No instales el software del enlace de Mega que trae el pedido: son archivos sin verificar que pueden traer malware.</p></div></li>
-          <li><div><h3>Configura la conexión</h3><p>En Car Scanner: Configuración → Adaptador OBDII → tipo <b>Bluetooth</b> → elige OBDII. Deja el protocolo en <b>Automático</b>. Si no conecta, prueba <b>ISO 9141-2</b> y luego <b>ISO 14230-4 KWP (5 baud init)</b>. En el perfil del carro elige Mitsubishi.</p></div></li>
+          <li><div><h3>Configura la conexión</h3><p>En Car Scanner: Configuración → Adaptador OBDII → tipo <b>Bluetooth</b> → elige OBDII. Deja el protocolo en <b>Automático</b>. Si no conecta, prueba <b>ISO 9141-2</b> y luego <b>ISO 14230-4 KWP (5 baud init)</b>. En el perfil del carro elige <span class="veh-make">Mitsubishi</span>.</p></div></li>
           <li><div><h3>Lee los códigos</h3><p>Entra en la sección de códigos de falla y copia los guardados y los pendientes en la pestaña <b>Códigos</b> de esta herramienta.</p></div></li>
           <li><div><h3>Pon en pantalla solo estos parámetros</h3><p>Car Scanner graba solo lo que se ve en pantalla. En la línea K cada lectura tarda, así que con menos parámetros cada uno se actualiza más seguido.</p>
             <div class="pids"><span>RPM del motor</span><span>Velocidad del vehículo</span><span>Temperatura del refrigerante</span><span>Temperatura del aire de admisión</span><span>Flujo de aire (MAF)</span><span>Posición del acelerador</span><span>Carga calculada</span><span>Avance del encendido</span><span>Ajuste de combustible a corto plazo, banco 1</span><span>Ajuste de combustible a largo plazo, banco 1</span><span>Sensor O2 banco 1 sensor 1 (voltaje)</span><span>Sensor O2 banco 1 sensor 2 (voltaje)</span><span>Voltaje del módulo</span><span>Presión barométrica (si aparece)</span></div></div></li>
@@ -395,15 +396,15 @@ footer { color: var(--muted); font-size: .8rem; }
           <h3>Qué se puede leer en este carro</h3>
           <ul class="plain">
             <li><b>Sí:</b> códigos del motor (guardados, pendientes y freeze frame), monitores de emisiones y datos en vivo del motor.</li>
-            <li><b>No, con OBD genérico:</b> caja automática (temperatura del ATF y cambios), ABS, airbags y 4x4. Usan el protocolo propio de Mitsubishi (MUT).</li>
-            <li>Un código <b>P0700</b> en el motor indica que la caja tiene una falla guardada. Para leerla hace falta un escáner con protocolo Mitsubishi.</li>
+            <li id="veh-cant"><b>No, con OBD genérico:</b> caja automática (temperatura del ATF y cambios), ABS, airbags y 4x4. Usan el protocolo propio de Mitsubishi (MUT).</li>
+            <li id="veh-extra">Un código <b>P0700</b> en el motor indica que la caja tiene una falla guardada. Para leerla hace falta un escáner con protocolo Mitsubishi.</li>
             <li>Si la ECU no reporta alguna señal (por ejemplo el MAF), la herramienta hace el análisis con las demás.</li>
           </ul>
         </div>
       </div>
     </section>
 
-    <footer>Los diagnósticos son orientativos. Se basan en datos OBD genéricos y rangos típicos del 4G69. Antes de cambiar piezas costosas, confirma con un mecánico o con pruebas directas.</footer>
+    <footer>Los diagnósticos son orientativos. Se basan en datos OBD genéricos y rangos típicos del <span class="veh-eng">4G69</span>. Antes de cambiar piezas costosas, confirma con un mecánico o con pruebas directas.</footer>
   </div>
 </main>
 
@@ -412,7 +413,17 @@ footer { color: var(--muted); font-size: .8rem; }
 'use strict';
 
 /* ---------- Vehículo ---------- */
-const VEH = { displ: 2.378 };
+/* ---------- Vehículos ---------- */
+const VEHICLES = {
+  outlander: { id: 'outlander', name: 'Outlander', full: 'Mitsubishi Outlander 2007', sub: 'primera generación', make: 'Mitsubishi', mut: 'MUT', engine: '2.4 L 4G69 MIVEC', engineShort: '4G69', displ: 2.378,
+    spec: [['Motor', '2.4 L 4G69 MIVEC'], ['Chasis', 'CU5W'], ['Caja', 'automática INVECS-II'], ['Tracción', '4x4'], ['Protocolo', 'línea K (ISO 9141 / KWP)']],
+    auto: true, idle: [650, 900], thermo: 'abre alrededor de 82 °C', box: 'el ATF de la caja automática', kind: 'camioneta' },
+  vitara: { id: 'vitara', name: 'Vitara', full: 'Vitara 2001', sub: '2 puertas · Suzuki / Chevrolet', make: 'Suzuki', mut: 'Suzuki SDL', engine: '1.6 L G16B 16V', engineShort: 'G16B', displ: 1.590,
+    spec: [['Motor', '1.6 L G16B 16V'], ['Caja', 'manual de 5 velocidades'], ['Puertas', '2'], ['OBD-II', 'por confirmar']],
+    auto: false, idle: [650, 850], thermo: 'abre alrededor de 82 °C (algunos repuestos a 88 °C)', box: 'el aceite de la caja (GL-4 75W-90)', kind: 'camioneta' },
+};
+let VEH = VEHICLES.outlander;
+try { const v = localStorage.getItem('diag-vehiculo'); if (v && VEHICLES[v]) VEH = VEHICLES[v]; } catch (e) { /* sin almacenamiento */ }
 
 /* ---------- Señales ---------- */
 const SIG = {
@@ -784,12 +795,12 @@ const DTC = {
 const SYS = { P: 'Motor y caja', B: 'Carrocería', C: 'Chasis (frenos, ABS, suspensión)', U: 'Red de comunicación entre módulos' };
 function describe(code) {
   const c = code.toUpperCase();
-  if (DTC[c]) return { title: DTC[c][0], causes: DTC[c][1] || '', known: true };
+  if (DTC[c] && !(VEH.make !== 'Mitsubishi' && /código Mitsubishi/.test(DTC[c][0]))) return { title: DTC[c][0], causes: DTC[c][1] || '', known: true };
   const sys = c[0], d1 = c[1], d2 = c[2];
-  if (sys === 'P' && (d1 === '1' || d1 === '3')) return { title: 'Código propio del fabricante (Mitsubishi)', causes: 'Su significado depende del fabricante. Búscalo con el VIN en un manual de servicio o en un escáner con protocolo Mitsubishi.', known: false };
+  if (sys === 'P' && (d1 === '1' || d1 === '3')) return { title: 'Código propio del fabricante (' + VEH.make + ')', causes: 'Su significado depende del fabricante. Búscalo con el VIN en un manual de servicio o en un escáner con protocolo ' + VEH.make + '.', known: false };
   const groups = { '0': 'Control de combustible, aire o emisiones auxiliares', '1': 'Medición de combustible y aire', '2': 'Medición de combustible y aire (circuito de inyectores)', '3': 'Sistema de encendido o fallos de encendido', '4': 'Controles auxiliares de emisiones', '5': 'Velocidad del vehículo, ralentí y entradas auxiliares', '6': 'Computadora y salidas auxiliares', '7': 'Caja de cambios', '8': 'Caja de cambios', '9': 'Caja de cambios', A: 'Sistema híbrido', B: 'Sistema híbrido', C: 'Sistema híbrido' };
   if (sys === 'P') return { title: 'Código genérico de ' + (groups[d2] || 'motor').toLowerCase(), causes: 'No está en la base de esta herramienta. La familia indica el sistema; búscalo con el código exacto.', known: false };
-  return { title: 'Código de ' + (SYS[sys] || 'otro sistema').toLowerCase(), causes: 'Este módulo no se lee con OBD genérico en tu Outlander; hace falta un escáner con protocolo Mitsubishi.', known: false };
+  return { title: 'Código de ' + (SYS[sys] || 'otro sistema').toLowerCase(), causes: 'Este módulo no se lee con OBD genérico en tu ' + VEH.name + '; hace falta un escáner con protocolo ' + VEH.make + '.', known: false };
 }
 const DTC_RE = /^[PBCU][0-3][0-9A-F]{3}$/;
 
@@ -848,7 +859,7 @@ function analyze(state) {
     }).filter(Boolean);
     const lim = t => (t.min !== null ? 'mín. ' + t.min : '') + (t.min !== null && t.max !== null ? ', ' : '') + (t.max !== null ? 'máx. ' + t.max : '');
     const fails = tests.filter(t => t.st === 'fail'), near = tests.filter(t => t.st === 'near'), done = tests.filter(t => t.st !== 'none');
-    const kline = tests.some(t => /^Prueba/.test(t.name)) ? ' En tu camioneta (línea K) Mitsubishi define qué mide cada prueba, así que se identifican por número; el resultado sí es confiable porque lo compara la propia computadora.' : '';
+    const kline = tests.some(t => /^Prueba/.test(t.name)) ? ' En tu ' + VEH.name + ' (línea K) ' + VEH.make + ' define qué mide cada prueba, así que se identifican por número; el resultado sí es confiable porque lo compara la propia computadora.' : '';
     if (fails.length) add('warn', 'Autodiagnóstico', fails.length === 1 ? 'Una prueba interna fuera de límite' : fails.length + ' pruebas internas fuera de límite',
       'La computadora probó el sistema y el resultado quedó fuera de su propio límite. Si se repite, terminará en un código de falla.' + kline,
       fails.map(t => t.name + ': ' + t.val + ' (' + lim(t) + ')'), ['Graba otro recorrido y vuelve a leer los autodiagnósticos para confirmar que se repite.', 'Si la prueba es de fallos de encendido o del catalizador, revisa bujías y bobinas antes de que dañen el catalizador.']);
@@ -867,7 +878,7 @@ function analyze(state) {
     const cruiseWarm = vals(rows, 'ect', r => r.cruise && r.t > (tWarm ? tWarm.t : Infinity));
     if (eMax >= 108) add('crit', 'Enfriamiento', 'Temperatura del motor alta', 'El refrigerante pasó de 108 °C. Seguir manejando así puede dañar la empacadura de la culata.', ['máx. ' + fmt(eMax) + ' °C'], ['Revisa el nivel de refrigerante con el motor frío.', 'Confirma que el electroventilador arranca cerca de los 100 °C.', 'Revisa el termostato, la bomba de agua y el radiador.']);
     else if (eMax >= 102) add('warn', 'Enfriamiento', 'Temperatura un poco alta', 'Llegó a más de 102 °C. En tráfico con el aire acondicionado puede pasar un momento, pero no debería mantenerse.', ['máx. ' + fmt(eMax) + ' °C'], ['Revisa nivel de refrigerante y que el ventilador encienda.']);
-    if (eMax < 75 && runMin >= 12) add('warn', 'Enfriamiento', 'El motor no llega a su temperatura', 'Después de ' + fmt(runMin) + ' minutos encendido no pasó de ' + fmt(eMax) + ' °C. Lo normal es 80 a 95 °C. El termostato pegado abierto es la causa más común. Hace gastar más gasolina y la calefacción sale tibia.', ['máx. ' + fmt(eMax) + ' °C', fmt(runMin) + ' min encendido'], ['Cambia el termostato (en el 4G69 abre alrededor de 82 °C).', 'Si el termostato está bien, revisa el sensor de temperatura del refrigerante.']);
+    if (eMax < 75 && runMin >= 12) add('warn', 'Enfriamiento', 'El motor no llega a su temperatura', 'Después de ' + fmt(runMin) + ' minutos encendido no pasó de ' + fmt(eMax) + ' °C. Lo normal es 80 a 95 °C. El termostato pegado abierto es la causa más común. Hace gastar más gasolina y la calefacción sale tibia.', ['máx. ' + fmt(eMax) + ' °C', fmt(runMin) + ' min encendido'], ['Cambia el termostato (en el ' + VEH.engineShort + ' ' + VEH.thermo + ').', 'Si el termostato está bien, revisa el sensor de temperatura del refrigerante.']);
     else if (cruiseWarm.length > 30 && median(cruiseWarm) < 77) add('warn', 'Enfriamiento', 'La temperatura baja al rodar', 'El motor calentó, pero en avenida bajó a ' + fmt(median(cruiseWarm)) + ' °C. Es la señal típica de un termostato que no cierra bien.', ['mediana en crucero ' + fmt(median(cruiseWarm)) + ' °C'], ['Cambia el termostato.']);
     else if (eMax >= 78 && eMax < 102) add('ok', 'Enfriamiento', 'Temperatura del motor normal', fin(warmMin) ? 'Llegó a 80 °C en ' + fmt(warmMin, 1) + ' minutos y se mantuvo en ' + fmt(quant(vals(rows, 'ect', r => r.warm), 0.1)) + ' a ' + fmt(eMax) + ' °C.' : 'Se mantuvo entre ' + fmt(quant(vals(rows, 'ect', r => r.warm), 0.1)) + ' y ' + fmt(eMax) + ' °C.', ['máx. ' + fmt(eMax) + ' °C']);
     else if (eMax < 75) add('info', 'Enfriamiento', 'El motor no terminó de calentar', 'El registro es muy corto para evaluar el termostato. Graba al menos 15 minutos desde el arranque en frío.', ['máx. ' + fmt(eMax) + ' °C']);
@@ -925,10 +936,10 @@ function analyze(state) {
   if (idleWarm.length >= 20) {
     const rp = idleWarm.map(r => r.rpm), m = median(rp), sd = std(rp);
     const ev = ['mediana ' + fmt(m) + ' rpm', '± ' + fmt(sd) + ' rpm', fmt(idleWarm.length) + ' s analizados'];
-    if (m > 950) add('warn', 'Ralentí', 'Ralentí alto', 'En caliente se queda en ' + fmt(m) + ' rpm. Lo típico es 650 a 900 rpm (sube un poco con el aire acondicionado).', ev, ['Confirma que el aire acondicionado estaba apagado.', 'Busca entradas de aire y limpia el cuerpo de aceleración.']);
+    if (m > VEH.idle[1] + 50) add('warn', 'Ralentí', 'Ralentí alto', 'En caliente se queda en ' + fmt(m) + ' rpm. Lo típico en el ' + VEH.engineShort + ' es ' + VEH.idle[0] + ' a ' + VEH.idle[1] + ' rpm (sube un poco con el aire acondicionado).', ev, ['Confirma que el aire acondicionado estaba apagado.', 'Busca entradas de aire y limpia el cuerpo de aceleración.']);
     else if (m < 600) add('warn', 'Ralentí', 'Ralentí bajo', 'Se queda en ' + fmt(m) + ' rpm en caliente.', ev, ['Limpia el cuerpo de aceleración y el paso de aire del control de ralentí.']);
     else if (sd > 60) add('warn', 'Ralentí', 'Ralentí inestable', 'Las RPM varían ± ' + fmt(sd) + ' rpm. Puede venir de cuerpo de aceleración sucio, control de ralentí, bujías o bobinas, o una entrada de aire.', ev, ['Limpia el cuerpo de aceleración.', 'Revisa bujías y bobinas.']);
-    else add('ok', 'Ralentí', 'Ralentí estable', 'En caliente: ' + fmt(m) + ' ± ' + fmt(sd) + ' rpm. Lo típico es 650 a 900 rpm.', ev);
+    else add('ok', 'Ralentí', 'Ralentí estable', 'En caliente: ' + fmt(m) + ' ± ' + fmt(sd) + ' rpm. Lo típico en el ' + VEH.engineShort + ' es ' + VEH.idle[0] + ' a ' + VEH.idle[1] + ' rpm.', ev);
   }
 
   // Voltaje
@@ -1016,7 +1027,7 @@ function analyze(state) {
       if (Math.abs(pct) <= 3) add('ok', 'Velocidad', 'La velocidad del OBD coincide con el GPS', 'La diferencia es de ' + sgn(pct, 1) + ' %, dentro del error normal. ' + at60, ev, [dash]);
       else add(Math.abs(pct) > 8 ? 'warn' : 'info', 'Velocidad', 'El OBD marca ' + fmt(Math.abs(pct), 1) + ' % ' + (pct > 0 ? 'más' : 'menos') + ' que el GPS',
         at60 + (pct > 0 ? ' Si los cauchos son más pequeños que los originales, el sensor de velocidad cuenta más vueltas y marca de más.' : ' Si los cauchos son más grandes que los originales, el sensor de velocidad marca de menos.')
-        + ' El odómetro, el consumo y los cambios de la caja automática usan esta misma señal.', ev,
+        + ' El odómetro y el consumo' + (VEH.auto ? ', y los cambios de la caja automática,' : '') + ' usan esta misma señal.', ev,
         ['Verifica la medida de los cauchos contra la etiqueta de la puerta del conductor.', 'Revisa que la presión de los cauchos sea la indicada.', dash]);
     } else add('info', 'Velocidad', 'Pocos datos para comparar con el GPS', 'Hacen falta al menos 20 segundos a velocidad estable por encima de 20 km/h con buena señal de GPS. Hubo ' + pairs.length + '.', [], ['Graba un tramo de avenida a velocidad constante con el teléfono cerca del parabrisas.']);
   }
@@ -1161,8 +1172,28 @@ function save() {
 }
 function load() { try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { return null; } }
 
+function applyVehicle() {
+  $('veh-sel').value = VEH.id;
+  $('veh-h1').textContent = VEH.name;
+  $('veh-sub').textContent = VEH.full + ' · ' + VEH.sub;
+  $('veh-spec').innerHTML = VEH.spec.map(([a, b]) => `<span>${a} <b>${b}</b></span>`).join('');
+  document.querySelectorAll('.veh-name').forEach(e => { e.textContent = VEH.name; });
+  document.querySelectorAll('.veh-make').forEach(e => { e.textContent = VEH.make; });
+  document.querySelectorAll('.veh-eng').forEach(e => { e.textContent = VEH.engineShort; });
+  $('veh-cant').innerHTML = '<b>No, con OBD genérico:</b> ' + (VEH.auto ? 'caja automática (temperatura del ATF y cambios), ' : '') + 'ABS, airbags y 4x4. Usan el protocolo propio de ' + VEH.make + ' (' + VEH.mut + ').';
+  $('veh-extra').innerHTML = VEH.id === 'vitara' ? 'Muchas Vitara de 2001 vendidas fuera de EE. UU. no tienen OBD-II genérico: no responden al adaptador y los códigos se leen por destellos de la luz de check engine. El grabador tiene la guía.' : 'Un código <b>P0700</b> en el motor indica que la caja tiene una falla guardada. Para leerla hace falta un escáner con protocolo Mitsubishi.';
+  fills = loadFills();
+}
+function setVehicle(id, rerender) {
+  if (!VEHICLES[id]) return;
+  VEH = VEHICLES[id];
+  try { localStorage.setItem('diag-vehiculo', id); } catch (e) { /* sin almacenamiento */ }
+  applyVehicle();
+  if (rerender && S.cols.length) recompute();
+}
 function ingest(text, name, example, mapping, codes) {
   const { cols, noTime, meta } = csvToColumns(text);
+  if (meta.vehiculo && VEHICLES[meta.vehiculo]) setVehicle(meta.vehiculo, false);
   S.csv = text; S.name = name; S.example = example; S.cols = cols; S.noTime = noTime; S.meta = meta;
   S.mapping = mapping && Object.keys(mapping).length ? mapping : autoMap(cols);
   if (meta.dtc_guardados !== undefined || meta.dtc_pendientes !== undefined) {
@@ -1242,7 +1273,7 @@ function renderSummary() {
     ['RPM máx.', fmt(Math.max(0, ...vals(rows, 'rpm'))), 'rpm'],
   ];
   $('facts').innerHTML = facts.map(([l, v, d]) => `<div class="fact"><div class="label">${l}</div><div class="v num">${v}</div><div class="d">${d}</div></div>`).join('');
-  $('trip-note').textContent = S.example ? 'Simulación de un 4G69 con una entrada de aire pequeña' : '';
+  $('trip-note').textContent = S.example ? 'Simulación de un ' + VEH.engineShort + ' con una entrada de aire pequeña' : '';
 }
 function renderFindings() {
   $('findings').innerHTML = A.findings.map(f => `<article class="finding">
@@ -1446,22 +1477,23 @@ function renderFuel() {
     const hiB = bands.filter(x => x.lo >= 90).sort((x, y) => y.l100 - x.l100)[0];
     if (hiB && hiB.l100 > best * 1.12) tips.push(`<b>La velocidad cuesta gasolina.</b> Entre ${hiB.hi > 200 ? 'más de ' + hiB.lo : hiB.lo + ' y ' + hiB.hi} km/h gastaste ${fmt((hiB.l100 / best - 1) * 100)} % más que en tu mejor rango (${b.lo}–${b.hi > 200 ? '+' : b.hi} km/h).`);
   }
-  if (f.accN + f.wotN >= 3) tips.push(`<b>Acelera más suave.</b> Hubo ${f.accN + f.wotN} arranques fuertes o a fondo. La caja automática de 4 marchas cambia antes y el motor queda en menos RPM si pisas el acelerador de forma progresiva.`);
+  if (f.accN + f.wotN >= 3) tips.push(`<b>Acelera más suave.</b> Hubo ${f.accN + f.wotN} arranques fuertes o a fondo. ${VEH.auto ? 'La caja automática de 4 marchas cambia antes y el motor queda en menos RPM si pisas el acelerador de forma progresiva.' : 'Con caja manual, pasa a la siguiente marcha antes de las 2.500–3.000 rpm y usa la 5.ª en carretera.'}`);
   if (f.hiS / Math.max(1, f.runS) > 0.1) tips.push(`<b>Menos tiempo arriba de 3.000 rpm.</b> El ${fmt(f.hiS / f.runS * 100)} % del recorrido el motor estuvo alto de vueltas.`);
   for (const x of A.findings) {
     if (x.area === 'Mezcla' && x.sev !== 'ok' && x.sev !== 'info') tips.push(`<b>Corrige la mezcla.</b> ${esc(x.title)}: mientras la computadora compense, el consumo y la potencia se resienten.`);
     if (x.area === 'Enfriamiento' && /termostato|no llega|baja al rodar/i.test(x.title + x.body) && x.sev === 'warn') tips.push('<b>Cambia el termostato.</b> Un motor frío trabaja con mezcla más rica y gasta más.');
     if (x.area === 'Sonda O2' && x.sev === 'warn') tips.push('<b>Revisa la sonda delantera.</b> Una sonda lenta o desviada hace que la computadora controle peor la mezcla.');
   }
-  tips.push('<b>Mantenimiento que rinde en el 4G69:</b> filtro de aire limpio, bujías al intervalo del manual, presión correcta de los cauchos y el ATF de la caja cambiado según el manual.');
+  tips.push('<b>Mantenimiento que rinde en el ' + VEH.engineShort + ':</b> filtro de aire limpio, bujías al intervalo del manual, presión correcta de los cauchos y ' + VEH.box + ' cambiado según el manual.');
   $('tips').innerHTML = tips.map(t => `<li>${t}</li>`).join('');
 }
 
 /* ---------- Llenados (consumo real) ---------- */
-const FILLS_KEY = 'diag-outlander-llenados';
-let fills = (() => { try { const v = JSON.parse(localStorage.getItem(FILLS_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } })();
+const fillsKey = () => VEH.id === 'outlander' ? 'diag-outlander-llenados' : 'diag-' + VEH.id + '-llenados';
+const loadFills = () => { try { const v = JSON.parse(localStorage.getItem(fillsKey()) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
+let fills = loadFills();
 let fillKind = 'trip';
-function saveFills() { try { localStorage.setItem(FILLS_KEY, JSON.stringify(fills)); } catch (e) { /* sin almacenamiento */ } }
+function saveFills() { try { localStorage.setItem(fillsKey(), JSON.stringify(fills)); } catch (e) { /* sin almacenamiento */ } }
 function sortedFills() { return [...fills].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id); }
 /* Calcula km/L entre tanques llenos. Con odómetro total, el primer llenado es el punto de partida.
    Con el parcial, cada llenado trae los km desde el anterior (se asume que el parcial se reinicia). */
@@ -1591,6 +1623,8 @@ let rt;
 window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (!$('panel-datos').hidden) renderCharts(); }, 150); });
 
 /* ---------- Inicio ---------- */
+applyVehicle();
+$('veh-sel').addEventListener('change', e => setVehicle(e.target.value, true));
 const saved = load();
 let handoff = null;
 try { handoff = JSON.parse(localStorage.getItem('obd-analizar') || 'null'); localStorage.removeItem('obd-analizar'); } catch (e) { handoff = null; }

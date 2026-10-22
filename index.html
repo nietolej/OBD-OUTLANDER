@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Grabador OBD Outlander</title>
+<title>Grabador OBD</title>
 <meta name="theme-color" content="#18212b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -76,6 +76,10 @@ select { color: var(--ink); background: var(--surface); border: 1px solid var(--
 .err { font-size: .9rem; color: var(--crit-ink); }
 .warnmsg { color: var(--warn-ink); }
 .ptable .how.err { color: var(--crit-ink); } .ptable .how.warnmsg { color: var(--warn-ink); } .ptable .how.okmsg { color: var(--good-ink); font-size: .7rem; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); color: var(--ink-2); padding: 8px 12px; font-size: .88rem; min-height: 40px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg button:disabled { opacity: .45; cursor: default; }
 .okmsg { font-size: .9rem; color: var(--good-ink); }
 /* Grabación */
 .recbar { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
@@ -128,7 +132,7 @@ ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--
   <div class="wrap">
     <div>
       <h1>Grabador OBD</h1>
-      <p class="sub">Mitsubishi Outlander 2007 · 2.4 L 4G69</p>
+      <p class="sub" id="veh-sub">Mitsubishi Outlander 2007 · 2.4 L 4G69</p>
     </div>
     <a href="analizador.html">Abrir el analizador →</a>
   </div>
@@ -136,6 +140,33 @@ ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--
 
 <main>
   <div class="wrap">
+    <section class="card" aria-labelledby="h-veh">
+      <div class="row between"><h2 id="h-veh">Vehículo</h2>
+        <div class="seg" role="group" aria-label="Vehículo"><button type="button" id="veh-outlander" data-veh="outlander">Outlander 2007</button><button type="button" id="veh-vitara" data-veh="vitara">Vitara 2001</button></div>
+      </div>
+      <p class="note" id="veh-note"></p>
+    </section>
+
+    <section class="card" id="vitara-card" aria-labelledby="h-vit" hidden>
+      <h2 id="h-vit">¿Tu Vitara tiene OBD-II?</h2>
+      <p class="meta">Muchas Vitara de 2001 vendidas fuera de EE. UU. traen el sistema anterior de Suzuki: no responden al adaptador ELM327 y muestran los códigos con destellos de la luz de check engine. Revísalo así:</p>
+      <ol class="steps">
+        <li>Busca debajo del tablero, del lado del conductor, un conector de <b>16 pines en forma de trapecio</b>. Si está, prueba Conectar. Si el adaptador dice <b>UNABLE TO CONNECT</b> o <b>BUS INIT: ERROR</b> con la llave en ON, aunque elijas ISO 9141-2 a mano, tu Vitara no tiene OBD-II genérico.</li>
+        <li>Si no hay conector de 16 pines, o no conecta, busca en el motor, cerca de la batería o de la caja de fusibles, un <b>conector de 6 pines</b> (Suzuki lo llama conector monitor). Ahí se leen los códigos por destellos.</li>
+      </ol>
+      <details>
+        <summary>Leer los códigos por destellos</summary>
+        <ol class="steps" style="margin-top:8px">
+          <li>Con la llave en OFF, une con un cable el <b>terminal de diagnóstico</b> con el <b>terminal de tierra</b> del conector de 6 pines. En muchos Suzuki el de diagnóstico es el del centro arriba y el de tierra el de abajo a la izquierda, pero confírmalo con el manual o el color del cable. Si no estás segura, que lo haga un mecánico: unir los terminales equivocados puede quemar un fusible.</li>
+          <li>Pon la llave en ON sin arrancar el motor. La luz de check engine empieza a destellar.</li>
+          <li>Cuenta: los destellos largos son las decenas y los cortos las unidades. Por ejemplo, 1 largo y 2 cortos = código <b>12</b>. Cada código se repite tres veces.</li>
+          <li><b>12</b> significa que no hay fallas guardadas. Anota los demás códigos, quita el cable y pon la llave en OFF.</li>
+        </ol>
+        <div class="codes" id="flash-codes" style="margin-top:6px"></div>
+        <p class="note">Códigos comunes de Suzuki con inyección multipunto. Confirma el significado exacto con el manual de tu motor.</p>
+      </details>
+    </section>
+
     <section class="card" aria-labelledby="h-con">
       <div class="row between"><h2 id="h-con">Adaptador</h2><span class="pill" id="pill">Desconectado</span></div>
       <p class="meta" id="con-meta">Empareja el adaptador en el Bluetooth del teléfono (clave 1234 o 0000), pon la llave en ON y toca Conectar.</p>
@@ -233,6 +264,39 @@ function log(msg) {
   logLines.push(t + '  ' + msg);
   if (logLines.length > 250) logLines.shift();
   const el = $('log'); el.textContent = logLines.join('\n'); el.scrollTop = el.scrollHeight;
+}
+
+/* ---------- Vehículos ---------- */
+const VEHICLES = {
+  outlander: { id: 'outlander', name: 'Outlander', full: 'Mitsubishi Outlander 2007', sub: 'primera generación', make: 'Mitsubishi', mut: 'MUT', engine: '2.4 L 4G69 MIVEC', engineShort: '4G69', displ: 2.378,
+    spec: [['Motor', '2.4 L 4G69 MIVEC'], ['Chasis', 'CU5W'], ['Caja', 'automática INVECS-II'], ['Tracción', '4x4'], ['Protocolo', 'línea K (ISO 9141 / KWP)']],
+    auto: true, idle: [650, 900], thermo: 'abre alrededor de 82 °C', box: 'el ATF de la caja automática', kind: 'camioneta' },
+  vitara: { id: 'vitara', name: 'Vitara', full: 'Vitara 2001', sub: '2 puertas · Suzuki / Chevrolet', make: 'Suzuki', mut: 'Suzuki SDL', engine: '1.6 L G16B 16V', engineShort: 'G16B', displ: 1.590,
+    spec: [['Motor', '1.6 L G16B 16V'], ['Caja', 'manual de 5 velocidades'], ['Puertas', '2'], ['OBD-II', 'por confirmar']],
+    auto: false, idle: [650, 850], thermo: 'abre alrededor de 82 °C (algunos repuestos a 88 °C)', box: 'el aceite de la caja (GL-4 75W-90)', kind: 'camioneta' },
+};
+const VEH_KEY = 'obd-vehiculo';
+let vehId = 'outlander';
+try { const v = localStorage.getItem(VEH_KEY); if (v && VEHICLES[v]) vehId = v; } catch (e) { /* sin almacenamiento */ }
+const V = () => VEHICLES[vehId];
+const FLASH = [['12', 'Sin fallas guardadas (sistema normal)'], ['13', 'Sonda de oxígeno'], ['14', 'Circuito del sensor de temperatura del refrigerante'], ['15', 'Circuito del sensor de temperatura del refrigerante'],
+  ['21', 'Sensor de posición del acelerador (señal alta)'], ['22', 'Sensor de posición del acelerador (señal baja)'], ['23', 'Circuito del sensor de temperatura del aire de admisión'], ['25', 'Circuito del sensor de temperatura del aire de admisión'],
+  ['24', 'Sensor de velocidad del vehículo'], ['31', 'Circuito del sensor de presión del múltiple (MAP)'], ['32', 'Circuito del sensor de presión del múltiple (MAP)'], ['33', 'Sensor de flujo de aire (motores con MAF)'], ['34', 'Sensor de flujo de aire (motores con MAF)'],
+  ['41', 'Señal de encendido'], ['42', 'Sensor de posición del árbol de levas o del cigüeñal'], ['44', 'Interruptor de ralentí (posición cerrada del acelerador)'], ['45', 'Interruptor de ralentí (posición cerrada del acelerador)'],
+  ['51', 'Sistema EGR'], ['52', 'Inyector'], ['53', 'Circuito de tierra de la computadora']];
+function setVehicle(id) {
+  if (!VEHICLES[id] || recording) return;
+  vehId = id;
+  try { localStorage.setItem(VEH_KEY, id); } catch (e) { /* sin almacenamiento */ }
+  renderVehicle();
+}
+function renderVehicle() {
+  const v = V();
+  $('veh-sub').textContent = v.full + ' · ' + v.engine;
+  Object.keys(VEHICLES).forEach(k => { const b = $('veh-' + k); b.setAttribute('aria-pressed', k === vehId ? 'true' : 'false'); b.disabled = !!recording && k !== vehId; });
+  $('veh-note').textContent = 'Las grabaciones quedan marcadas con este vehículo, y el analizador usa sus datos: motor, cilindrada, ralentí y caja.' + (recording ? ' Detén la grabación para cambiarlo.' : '');
+  $('vitara-card').hidden = vehId !== 'vitara';
+  $('flash-codes').innerHTML = FLASH.map(([c, d]) => `<div class="code"><div class="c">${c}</div><div class="note">${d}</div></div>`).join('');
 }
 
 /* ---------- PIDs del modo 01 ---------- */
@@ -425,7 +489,7 @@ class SimLink {
     const decel = dv < -0.5 && v > 15;
     const tps = wot ? 92 : decel || v < 1 ? 12.5 : 14 + Math.max(0, dv) * 9 + v * 0.06;
     const load = wot ? 96 : decel ? 14 : v < 1 ? 23 + Math.max(0, 60 - ect) * 0.15 : Math.min(80, 26 + Math.max(0, dv) * 14 + v * 0.18);
-    const maf = (load / 100) * 0.92 * 2.378 * rpm / 120 * (92000 / (287.05 * 309)) + nz(0.15);
+    const maf = (load / 100) * 0.92 * V().displ * rpm / 120 * (92000 / (287.05 * 309)) + nz(0.15);
     const closed = ect > 45 && !decel && !wot;
     if (closed && Math.random() < 0.42) this.o2 = 1 - this.o2;
     const ltft = closed ? Math.max(1.5, Math.min(14, 14 * Math.exp(-(maf - 3) / 3.5))) + 1.5 : 0;
@@ -535,7 +599,7 @@ async function connect(useSim) {
     if (!useSim) { const v = await elm.cmd('0902', 5000); vin = parseVIN(v); }
     log('PIDs soportados: ' + [...supported].sort().join(' '));
     setStatus(useSim ? 'sim' : 'on', useSim ? 'Simulador' : 'Conectado');
-    $('con-meta').innerHTML = (useSim ? '<b>Modo prueba:</b> datos inventados de un 4G69, no son de tu carro. ' : '') +
+    $('con-meta').innerHTML = (useSim ? '<b>Modo prueba:</b> datos inventados de un ' + V().engineShort + ', no son de tu carro. ' : '') +
       'Protocolo <b>' + esc(proto) + '</b> · ' + esc(version || 'ELM327') + ' · ' + active.size + ' señales disponibles' + (vin ? ' · VIN ' + esc(vin) : '');
     if (!useSim) startGPS();
     renderTiles();
@@ -545,7 +609,7 @@ async function connect(useSim) {
     const msg = String(e.message || e);
     log('✕ ' + msg);
     await disconnect(true);
-    if (/UNABLE TO CONNECT|BUS INIT/i.test(msg)) showErr('El adaptador no logró hablar con la computadora del carro (' + esc(msg) + '). Confirma la llave en ON y prueba el protocolo <b>ISO 9141-2</b> a mano. Si sigue igual, este adaptador "v2.1" probablemente no maneja bien la línea K de tu Outlander.');
+    if (/UNABLE TO CONNECT|BUS INIT/i.test(msg)) showErr('El adaptador no logró hablar con la computadora del carro (' + esc(msg) + '). Confirma la llave en ON y prueba el protocolo <b>ISO 9141-2</b> a mano. ' + (vehId === 'vitara' ? 'Si sigue igual, es probable que tu Vitara no tenga OBD-II genérico: revisa la guía <b>¿Tu Vitara tiene OBD-II?</b> más arriba.' : 'Si sigue igual, este adaptador "v2.1" probablemente no maneja bien la línea K de tu ' + V().name + '.'));
     else showErr('No se completó la conexión: ' + esc(msg) + ' Revisa la llave en ON e intenta de nuevo. El registro del adaptador muestra el detalle.');
   }
 }
@@ -732,17 +796,17 @@ function renderTiles() {
 async function keepAwake() { try { if ('wakeLock' in navigator && document.visibilityState === 'visible') wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { /* no disponible */ } }
 document.addEventListener('visibilitychange', () => { if (recording && document.visibilityState === 'visible') keepAwake(); });
 function startRec() {
-  recording = { id: 'r' + Date.now(), start: Date.now(), rows: [], sim, proto, vin, version, codes: lastCodes ? { stored: [...lastCodes.stored], pending: [...lastCodes.pending], mil: lastCodes.mil, count: lastCodes.count } : null, ecu: ecuMeta(), m06: m06Meta() };
+  recording = { id: 'r' + Date.now(), start: Date.now(), rows: [], veh: vehId, sim, proto, vin, version, codes: lastCodes ? { stored: [...lastCodes.stored], pending: [...lastCodes.pending], mil: lastCodes.mil, count: lastCodes.count } : null, ecu: ecuMeta(), m06: m06Meta() };
   $('btn-rec').classList.add('on'); $('btn-rec').setAttribute('aria-label', 'Detener grabación');
   $('clock').classList.add('live');
-  keepAwake();
+  keepAwake(); renderVehicle();
   log('● Grabación iniciada');
 }
 function stopRec() {
   if (!recording) return;
   const r = recording; recording = null;
   $('btn-rec').classList.remove('on'); $('btn-rec').setAttribute('aria-label', 'Empezar a grabar');
-  $('clock').classList.remove('live');
+  $('clock').classList.remove('live'); renderVehicle();
   try { wakeLock?.release(); } catch (e) { /* liberado */ } wakeLock = null;
   try { localStorage.removeItem(CUR); } catch (e) { /* sin almacenamiento */ }
   if (r.rows.length < 3) { log('Grabación descartada: muy corta'); renderRec(); return; }
@@ -753,7 +817,7 @@ function stopRec() {
 function storeRec(r) {
   const list = loadRecs();
   const end = r.rows[r.rows.length - 1].t;
-  list.unshift({ id: r.id, start: r.start, end, n: r.rows.length, sim: r.sim, proto: r.proto, codes: r.codes, csv: toCSV(r) });
+  list.unshift({ id: r.id, start: r.start, end, n: r.rows.length, veh: r.veh || 'outlander', sim: r.sim, proto: r.proto, codes: r.codes, csv: toCSV(r) });
   while (list.length > 12) list.pop();
   if (!saveRecs(list)) {
     while (list.length > 1) { list.pop(); if (saveRecs(list)) { showErr('La memoria del navegador está llena: se borraron las grabaciones más viejas.'); return; } }
@@ -768,7 +832,7 @@ setInterval(() => { if (recording) { try { localStorage.setItem(CUR, JSON.string
 
 function toCSV(r) {
   const used = COLS.filter(([k]) => r.rows.some(x => x[k] !== undefined));
-  const meta = ['Grabador OBD Outlander', 'inicio=' + new Date(r.start).toISOString(), 'protocolo=' + (r.proto || ''), 'adaptador=' + (r.version || ''), 'vin=' + (r.vin || ''), 'simulado=' + (r.sim ? 'si' : 'no')];
+  const meta = ['Grabador OBD', 'vehiculo=' + (r.veh || 'outlander'), 'inicio=' + new Date(r.start).toISOString(), 'protocolo=' + (r.proto || ''), 'adaptador=' + (r.version || ''), 'vin=' + (r.vin || ''), 'simulado=' + (r.sim ? 'si' : 'no')];
   if (r.codes) {
     meta.push('dtc_guardados=' + r.codes.stored.join(' ')); meta.push('dtc_pendientes=' + r.codes.pending.join(' '));
     if (r.codes.mil !== null && r.codes.mil !== undefined) meta.push('luz_check=' + (r.codes.mil ? 'encendida' : 'apagada'));
@@ -889,7 +953,7 @@ function renderM06() {
   const order = { fail: 0, near: 1, pass: 2, none: 3 };
   ev.sort((a, b) => order[a[1]] - order[b[1]]);
   out.innerHTML = `<p class="meta"><b>${m.res.length}</b> pruebas · <span class="err">${n('fail')} fuera de límite</span> · <span class="warnmsg">${n('near')} cerca del límite</span> · <span class="okmsg">${n('pass')} pasan</span>${n('none') ? ' · ' + n('none') + ' sin resultado aún' : ''}</p>` +
-    (m.can ? '' : '<p class="note">En la línea K, qué mide cada prueba lo define Mitsubishi, así que se muestra por número. El resultado (pasa o falla) sí es confiable, porque la computadora entrega su propio límite.</p>') +
+    (m.can ? '' : '<p class="note">En la línea K, qué mide cada prueba lo define ' + V().make + ', así que se muestra por número. El resultado (pasa o falla) sí es confiable, porque la computadora entrega su propio límite.</p>') +
     `<div style="overflow-x:auto"><table class="ptable"><tbody>${ev.map(([r, e]) => `<tr><td>${esc(m06Name(r))}<div class="how ${lab[e][0]}">${lab[e][1]}</div></td><td class="val">${r.v}<div class="how">${r.can ? 'rango ' + r.min + '–' + r.max : (r.kind === 'max' ? 'máx. ' : 'mín. ') + r.lim}</div></td></tr>`).join('')}</tbody></table></div>` +
     `<p class="note">Leído a las ${new Date(m.t).toLocaleTimeString('es-VE', { hour12: false })}. Se guarda en la próxima grabación y el analizador lo revisa.</p>`;
 }
@@ -983,7 +1047,7 @@ function renderList() {
     const dur = mmss((r.end - r.start) / 1000);
     const codes = r.codes ? [...r.codes.stored, ...r.codes.pending] : null;
     return `<div class="rec" data-id="${r.id}">
-      <div class="row between"><span class="t">${d.toLocaleDateString('es-VE', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', hour12: false })}${r.sim ? ' · prueba' : ''}</span><span class="note num">${dur} · ${r.n} lecturas</span></div>
+      <div class="row between"><span class="t">${d.toLocaleDateString('es-VE', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', hour12: false })}${' · ' + esc((VEHICLES[r.veh || 'outlander'] || VEHICLES.outlander).name)}${r.sim ? ' · prueba' : ''}</span><span class="note num">${dur} · ${r.n} lecturas</span></div>
       <div class="note">${codes === null ? 'Sin lectura de códigos' : codes.length ? 'Códigos: ' + codes.join(', ') : 'Sin códigos'}${r.proto ? ' · ' + esc(r.proto) : ''}</div>
       <div class="row"><button class="btn small primary" data-act="analyze" type="button">Analizar</button><button class="btn small" data-act="download" type="button">Descargar CSV</button><button class="btn small" data-act="share" type="button">Compartir</button><button class="btn small danger" data-act="del" type="button">Borrar</button></div>
     </div>`;
@@ -993,7 +1057,7 @@ $('recs').addEventListener('click', async e => {
   const b = e.target.closest('button[data-act]'); if (!b) return;
   const id = b.closest('.rec').dataset.id;
   const r = [...memOnly, ...loadRecs()].find(x => x.id === id); if (!r) return;
-  const name = 'outlander-' + new Date(r.start).toISOString().slice(0, 16).replace(/[:T]/g, '-') + (r.sim ? '-prueba' : '') + '.csv';
+  const name = (r.veh || 'outlander') + '-' + new Date(r.start).toISOString().slice(0, 16).replace(/[:T]/g, '-') + (r.sim ? '-prueba' : '') + '.csv';
   if (b.dataset.act === 'analyze') {
     try { localStorage.setItem('obd-analizar', JSON.stringify({ csv: r.csv, name })); location.href = 'analizador.html#resumen'; }
     catch (err) { showErr('No pude pasar la grabación al analizador. Descárgala e impórtala allí.'); }
@@ -1034,6 +1098,8 @@ try {
   localStorage.removeItem(CUR);
 } catch (e) { /* sin almacenamiento */ }
 setStatus('', 'Desconectado');
+document.querySelectorAll('[data-veh]').forEach(b => b.addEventListener('click', () => setVehicle(b.dataset.veh)));
+renderVehicle();
 renderTiles(); renderList();
 })();
 </script>
